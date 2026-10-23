@@ -1,0 +1,10 @@
+瑜珈計時器（PWA）安裝方式
+
+1. 把這個資料夾裡的所有檔案上傳到支援 HTTPS 的網站空間（例如 GitHub Pages 或 Netlify）。
+2. 用裝置的瀏覽器打開網址：
+   - iPhone / iPad：用 Safari 開啟 → 分享 → 加入主畫面
+   - Android：用 Chrome 開啟 → 選單 → 安裝應用程式
+   - Windows：用 Edge 或 Chrome 開啟 → 網址列右側的「安裝」圖示
+3. 安裝後第一次開啟完成，之後就能離線使用。
+
+直接在電腦上雙擊 index.html 也能使用，但不能離線安裝。
