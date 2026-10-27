@@ -556,6 +556,40 @@ kbd{font-family:var(--num);background:var(--panel-2);border:1px solid var(--pane
 .edit-head .keys-btn,.comp-act .keys-btn{width:40px;height:40px}
 .icon-btn.keys-t{color:var(--ink-soft)}
 @media (max-width:700px){ .groups-head .keys-btn{display:none} }
+/* ================= v3.3 search ================= */
+.search-pill{display:flex;align-items:center;gap:8px;width:100%;background:var(--white);border-radius:14px;padding:7px 12px;margin:2px 0 6px;color:var(--ink-soft);font-size:14px}
+.search-pill svg{width:18px;height:18px;flex:none}
+.search-pill span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.left-collapsed .search-pill,.sorting-mode .search-pill{display:none}
+@media (max-width:700px){ .groups .search-pill{display:flex} }
+.search-scrim{place-items:start center;padding-top:8vh}
+.dialog.search{width:min(620px,100%);gap:10px;max-height:80vh}
+.q-row{display:flex;align-items:center;gap:8px;border:2px solid var(--panel);border-radius:14px;padding:4px 6px 4px 10px}
+.q-row:focus-within{border-color:var(--blue)}
+.q-ic svg{width:20px;height:20px;color:var(--arrow)}
+.q-row input{flex:1;min-width:0;border:0;outline:none;font-size:17px;padding:6px 0;background:transparent;color:var(--ink)}
+.q-scopes{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.q-scope{border-radius:16px;padding:5px 12px;background:var(--panel-2);font-size:14px}
+.q-scope[aria-checked="true"]{background:var(--pink);font-weight:700}
+.q-desc{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--ink-soft);margin-left:auto}
+.q-count{font-size:13px;color:var(--ink-soft)}
+.q-list{list-style:none;margin:0;padding:0;overflow-y:auto;min-height:0;display:flex;flex-direction:column;gap:4px}
+.q-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;cursor:pointer}
+.q-item:hover{background:var(--panel-2)}
+.q-item.on{background:var(--panel-2);box-shadow:inset 3px 0 0 var(--pink-deep)}
+.q-tag{flex:none;font-size:11px;font-weight:700;border-radius:8px;padding:2px 7px;background:var(--sage);color:var(--white)}
+.q-tag.timer{background:var(--blue)}
+.q-tag.item{background:var(--pink);color:var(--ink)}
+.q-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.q-name{font-size:16px;overflow-wrap:anywhere}
+.q-sub,.q-snip{font-size:12px;color:var(--ink-soft);overflow-wrap:anywhere}
+.q-item mark{background:#ffe08a;color:inherit;border-radius:3px;padding:0 1px}
+.group.found{animation:found 1.6s ease-out}
+@keyframes found{0%,40%{box-shadow:0 0 0 4px var(--pink-deep)}100%{box-shadow:0 0 0 0 transparent}}
+.s-search{display:flex;align-items:center;gap:6px;width:100%;background:rgba(255,255,255,.92);border-radius:14px;padding:5px 10px;margin-top:8px}
+.s-search svg{width:16px;height:16px;color:var(--arrow);flex:none}
+.s-search input{flex:1;min-width:0;border:0;outline:none;background:transparent;font-size:14px;color:var(--ink)}
+.s-search #sCount{font-size:11px;color:var(--ink-soft);white-space:nowrap}
 </style></head><body>
 <div class="app" id="app"></div>
 <div class="flash" id="flash"></div>
@@ -598,6 +632,7 @@ const I = {
   menu: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>',
   handle: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3 7h18M3 12h18M3 17h18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>',
   pose: '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="13" r="6.5" fill="currentColor"/><path d="M32 22c-6 0-9 6-9.5 12L11 40l2 3.4 13.5-5L32 44l5.5-5.6L51 43.4l2-3.4-11.5-6C41 28 38 22 32 22z" fill="currentColor"/><path d="M12 53h40" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>',
+  search: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M15.5 15.5L21 21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>',
   keys: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 10h1M9.5 10h1M13 10h1M16.5 10h1M6 13.5h1M17 13.5h1M9 14h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   sort: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v15M7 4L3.5 7.5M7 4l3.5 3.5M17 20V5M17 20l-3.5-3.5M17 20l3.5-3.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   note: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 18.5a3 3 0 1 1-2-2.8V5l13-2v12.5a3 3 0 1 1-2-2.8V7.1L8 8.5z" fill="currentColor"/></svg>',
@@ -1037,9 +1072,10 @@ let openDrawer = null;
 function buildShell() {
   $('#app').innerHTML = `
 <div class="page main" id="pMain">
-  <div class="topbar"><button class="icon-btn" data-act="menu" aria-label="開啟群組清單">${I.menu}</button><div class="tname" id="tName"></div><button class="icon-btn keys-t" data-act="keys" aria-label="快捷鍵清單">${I.keys}</button><button class="icon-btn gear-t" data-act="settings" aria-label="設定">${I.gear}</button></div>
+  <div class="topbar"><button class="icon-btn" data-act="menu" aria-label="開啟群組清單">${I.menu}</button><div class="tname" id="tName"></div><button class="icon-btn keys-t" data-act="search" aria-label="搜尋">${I.search}</button><button class="icon-btn keys-t" data-act="keys" aria-label="快捷鍵清單">${I.keys}</button><button class="icon-btn gear-t" data-act="settings" aria-label="設定">${I.gear}</button></div>
   <aside class="groups" id="groups" aria-label="群組與計時器">
     <div class="groups-head"><button class="gear" data-act="settings" aria-label="設定">${I.gear}</button><button class="tri up" data-act="gup" aria-label="群組往上捲">${I.flower}</button><button class="sort-btn" data-act="sortMode" title="排序群組與計時器（S）" aria-label="排序群組與計時器">${I.sort}</button><button class="sort-btn keys-btn" data-act="keys" title="快捷鍵（F1）" aria-label="快捷鍵清單">${I.keys}</button></div>
+    <button class="search-pill" data-act="search" title="搜尋（${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} + K）">${I.search}<span>搜尋群組、計時器</span></button>
     <div class="sortbar" id="sortBar" hidden><span>按住 ≡ 拖曳調整順序</span><button class="save-btn" data-act="sortDone">完成</button></div>
     <div class="group-list" id="groupList"></div>
     <div class="groups-foot"><button class="tri down" data-act="gdown" aria-label="群組往下捲">${I.flower}</button><button class="add-group" data-act="addGroup"><span class="plus">${I.plus}</span>新增群組</button></div>
@@ -1097,6 +1133,7 @@ function buildShell() {
 </div>
 <div class="page set" id="pSet" hidden>
   <aside class="set-aside">
+    <div class="s-search"><span aria-hidden="true">${I.search}</span><input id="sQuery" type="search" placeholder="搜尋音效名稱或檔名" autocomplete="off" aria-label="搜尋音效"><span id="sCount" class="num"></span></div>
     <button class="flower up" data-act="sup" aria-label="清單往上">${I.flower}</button>
     <div class="snd-list" id="sndList"></div>
     <button class="flower down" data-act="sdown" aria-label="清單往下">${I.flower}</button>
@@ -1588,7 +1625,7 @@ const SV = { view: 'sound', sel: 'vibrate', detail: false };
 const prev = { el: null, id: null };
 function stopPreview() { if (prev.el) { prev.el.pause(); } prev.id = null; updatePreviewUI(); }
 function renderSettings() {
-  setTimeout(() => fitAll($('#pSet')), 0);
+  setTimeout(() => { fitAll($('#pSet')); filterSounds(); }, 0);
   $('#pSet').classList.toggle('detail', !!SV.detail);
   if (!sndById(SV.sel)) SV.sel = S.sounds[0] && S.sounds[0].id;
   const sm = SEL && SEL.kind === 'sound';
@@ -2193,6 +2230,7 @@ function initDeleteGestures() {
 const ACT = {
   menu: openMenu, menuClose: () => { closeMenu(); if (SORT) exitSort(); },
   keys: () => showShortcuts(),
+  search: () => openSearch(),
   sortMode: () => enterSort(), sortDone: () => { exitSort(); if (isPortrait()) closeMenu(); },
   settings: () => { SV.detail = false; renderSettings(); showPage('settings'); },
   gup: () => scrollList($('#groupList'), -1), gdown: () => scrollList($('#groupList'), 1),
@@ -2262,7 +2300,7 @@ const ACT = {
 
 function bindEvents() {
   document.addEventListener('click', e => {
-    if (SORT && e.target.closest('#groups') && !e.target.closest('[data-act=sortDone],[data-act=gup],[data-act=gdown],[data-act=collapse],[data-act=keys]')) { e.stopPropagation(); e.preventDefault(); return; }
+    if (SORT && e.target.closest('#groups') && !e.target.closest('[data-act=sortDone],[data-act=gup],[data-act=gdown],[data-act=collapse],[data-act=keys],[data-act=search]')) { e.stopPropagation(); e.preventDefault(); return; }
     if (SEL) {
       const row = e.target.closest(`[data-del="${SEL.kind}"]`);
       if (row && !e.target.closest('.selbar')) { e.stopPropagation(); e.preventDefault(); toggleSel(row.dataset.key); return; }
@@ -2322,6 +2360,8 @@ function bindEvents() {
     if (e.target.id === 'sName' && !e.target.value.trim()) { const s = sndById(SV.sel); s.name = '音效'; touch(s); save(); renderSettings(); }
     if (e.target.id === 'sPlays') { const s = sndById(SV.sel); s.plays = clamp(parseInt(e.target.value, 10) || 1, 1, 99); touch(s); save(); renderSettings(); }
   });
+  $('#sQuery').addEventListener('input', filterSounds);
+  $('#sQuery').addEventListener('keydown', e => { if (e.key === 'Escape' && e.target.value) { e.stopPropagation(); e.target.value = ''; filterSounds(); } });
   $('#sFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; const tid = e.target.dataset.target; e.target.value = ''; takeSoundFile(f, tid ? sndById(tid) : null); });
   $('#bFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) importData(f); });
   let lastPortrait = isPortrait();
@@ -2764,14 +2804,14 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
 const MOD = isMac ? '⌘' : 'Ctrl';
 const SHORTCUTS = {
   main: [['空白鍵', '開始／暫停'], ['R', '重來'], ['↑ ／ ↓', '上一個／下一個項目'], ['1～9', '跳到第 N 個項目'], ['← ／ →', '同一群組的上一個／下一個計時器'],
-    ['E', '編輯目前的計時器'], ['W', '開關碼表'], ['L', '碼表記錄一筆'], ['F', '全螢幕'], ['S', '進入／離開排序模式'], ['滑鼠雙擊項目', '切換到該項目並開始'], ['Esc', '關閉抽屜／返回'], ['? 或 F1', '顯示這份清單']],
-  edit: [[MOD + ' + S', '儲存'], ['Esc', '返回（未儲存會先詢問）'], ['Alt + ↑ ／ ↓', '選上一個／下一個項目'], ['Alt + Shift + ↑ ／ ↓', '把目前項目上移／下移'],
+    ['E', '編輯目前的計時器'], ['W', '開關碼表'], ['L', '碼表記錄一筆'], ['F', '全螢幕'], ['S', '進入／離開排序模式'], [MOD + ' + K 或 /', '搜尋群組、計時器模組、計時器'], ['滑鼠雙擊項目', '切換到該項目並開始'], ['Esc', '關閉抽屜／返回'], ['? 或 F1', '顯示這份清單']],
+  edit: [[MOD + ' + S', '儲存'], [MOD + ' + K', '搜尋（未儲存時會先提醒）'], ['Esc', '返回（未儲存會先詢問）'], ['Alt + ↑ ／ ↓', '選上一個／下一個項目'], ['Alt + Shift + ↑ ／ ↓', '把目前項目上移／下移'],
     ['Alt + N', '新增計時項目'], ['Alt + C', '複製目前項目'], ['Alt + Delete', '刪除目前項目'], ['Alt + T', '切換倒數計時／計時器'], ['Alt + I', '打開圖片排版'],
     ['Alt + 1 ／ 2 ／ 3', '跳到標題／時間／說明'], ['↑ ／ ↓（時間、次數欄）', '加減 1，按住 Shift 加減 10'], [MOD + ' + B', '說明文字粗體'], [MOD + ' + Shift + > ／ <', '說明文字字級 +2 ／ −2'], ['F1（或不在輸入框時按 ?）', '顯示這份清單']],
   compose: [['V ／ P ／ T', '選取／畫筆／文字'], ['R ／ O ／ A ／ L', '方框／圓圈／箭頭／直線'], ['I', '加入圖片'], ['C', '裁切（Enter 套用、Esc 取消）'], ['Shift + R', '旋轉 90°'],
     ['] ／ [', '上移一層／下移一層'], ['方向鍵', '移動 1 點，Shift 一次 10 點'], [MOD + ' + C ／ V', '複製／貼上物件'], [MOD + ' + D', '原地複製'], ['Delete', '刪除選取'],
     [MOD + ' + Z ／ Y', '上一步／下一步'], [MOD + ' + Enter', '完成'], ['Esc', '取消'], ['? 或 F1', '顯示這份清單']],
-  settings: [['空白鍵', '試聽／暫停'], ['↑ ／ ↓', '上一個／下一個音效'], ['Esc', '返回'], ['? 或 F1', '顯示這份清單']],
+  settings: [['/', '搜尋音效'], [MOD + ' + K', '搜尋群組、計時器'], ['空白鍵', '試聽／暫停'], ['↑ ／ ↓', '上一個／下一個音效'], ['Esc', '返回'], ['? 或 F1', '顯示這份清單']],
 };
 function showShortcuts() {
   const list = SHORTCUTS[page] || SHORTCUTS.main;
@@ -2813,6 +2853,7 @@ function initShortcuts() {
   document.addEventListener('keydown', e => {
     if (e.key === 'F1') { e.preventDefault(); if (!document.querySelector('.scrim')) showShortcuts(); return; } // works even with a Chinese IME on
     if (e.defaultPrevented || e.isComposing || e.keyCode === 229) return; // typing Chinese with an IME
+    if ((isMac ? e.metaKey : e.ctrlKey) && e.code === 'KeyK' && !document.querySelector('.scrim:not(.search-scrim)')) { e.preventDefault(); openSearch(); return; }
     if (document.querySelector('.scrim')) return;
     const el = e.target, typing = /INPUT|TEXTAREA|SELECT/.test(el.tagName) || el.isContentEditable;
     const mod = isMac ? e.metaKey : e.ctrlKey, k = e.key, code = e.code;
@@ -2831,6 +2872,7 @@ function initShortcuts() {
       else if ((k === 'l' || k === 'L') && (openDrawer === 'sw' || S.sw.running)) swAct('lap');
       else if (k === 'f' || k === 'F') toggleFullscreen();
       else if (k === 's' || k === 'S') enterSort();
+      else if (k === '/') { e.preventDefault(); openSearch(); }
       return;
     }
     if (page === 'edit') {
@@ -2852,6 +2894,7 @@ function initShortcuts() {
       return;
     }
     if (page === 'settings') {
+      if (!typing && k === '/') { e.preventDefault(); const q = $('#sQuery'); if (isPortrait() && SV.detail) { SV.detail = false; renderSettings(); } q.focus(); q.select(); return; }
       if (typing || mod || e.altKey || SV.view !== 'sound') return;
       if (k === ' ') { e.preventDefault(); if (prev.el && prev.id === SV.sel && !prev.el.paused) prev.el.pause(); else previewPlay(); }
       else if (k === 'ArrowUp' || k === 'ArrowDown') {
@@ -2862,6 +2905,123 @@ function initShortcuts() {
   }, true);
   // double-click an item: jump to it and start
   $('#itemList').addEventListener('dblclick', e => { const b = e.target.closest('.item-pill'); if (!b) return; selectItem(+b.dataset.i); if (!R.running) play(); });
+}
+
+/* ================= search (groups / timers / timer items) ================= */
+const SCOPES = [['all', '全部'], ['group', '群組'], ['timer', '計時器模組'], ['item', '計時器']];
+const normTxt = s => String(s || '').normalize('NFKC').toLowerCase();
+const terms = q => normTxt(q).split(/\s+/).filter(Boolean);
+const hit = (text, ts) => { const n = normTxt(text); return ts.every(t => n.includes(t)); };
+function mark(text, ts) {
+  let html = esc(text); if (!ts.length) return html;
+  const src = String(text || ''), n = normTxt(src);
+  if (n.length !== src.length) return html; // NFKC changed the length: skip highlighting rather than misplace it
+  const marks = new Array(src.length).fill(false);
+  for (const t of ts) { let i = n.indexOf(t); while (i >= 0) { for (let j = i; j < i + t.length; j++) marks[j] = true; i = n.indexOf(t, i + t.length); } }
+  let out = '', open = false;
+  for (let i = 0; i < src.length; i++) {
+    if (marks[i] && !open) { out += '<mark>'; open = true; } else if (!marks[i] && open) { out += '</mark>'; open = false; }
+    out += esc(src[i]);
+  }
+  return out + (open ? '</mark>' : '');
+}
+const plain = it => it.desc || (it.descHtml ? it.descHtml.replace(/<[^>]+>/g, ' ') : '');
+function snippet(text, ts) {
+  const src = String(text || '').replace(/\s+/g, ' ').trim(), n = normTxt(src);
+  const i = ts.length ? Math.max(0, n.indexOf(ts[0])) : 0, a = Math.max(0, i - 12);
+  return (a > 0 ? '…' : '') + src.slice(a, a + 48) + (a + 48 < src.length ? '…' : '');
+}
+function runSearch(q, scope, withDesc) {
+  const ts = terms(q); if (!ts.length) return [];
+  const out = [];
+  const groupOf = id => S.groups.find(g => g.timerIds.includes(id));
+  if (scope === 'all' || scope === 'group')
+    for (const g of S.groups) if (hit(g.name, ts)) out.push({ kind: 'group', g, html: mark(g.name, ts), sub: `${g.timerIds.length} 個計時器模組` });
+  if (scope === 'all' || scope === 'timer')
+    for (const g of S.groups) for (const id of g.timerIds) { const t = S.timers[id]; if (t && hit(t.name, ts)) out.push({ kind: 'timer', g, t, html: mark(t.name, ts), sub: `${g.name} · ${t.items.length} 個計時器` }); }
+  if (scope === 'all' || scope === 'item')
+    for (const g of S.groups) for (const id of g.timerIds) {
+      const t = S.timers[id]; if (!t) continue;
+      t.items.forEach((it, i) => {
+        const inTitle = hit(it.title, ts), d = withDesc ? plain(it) : '', inDesc = !inTitle && d && hit(d, ts);
+        if (inTitle || inDesc) out.push({ kind: 'item', g, t, i, html: `${i + 1}.${mark(it.title || '未命名', ts)}`, sub: `${g.name} › ${t.name}`, desc: inDesc ? mark(snippet(d, ts), ts) : '' });
+      });
+    }
+  void groupOf;
+  return out;
+}
+const KIND_TAG = { group: '群組', timer: '模組', item: '計時器' };
+let SR = null; // { list, sel }
+function openSearch() {
+  if (document.querySelector('.search-scrim')) { $('#qInput').focus(); return; }
+  closeDrawers(); if (SORT) exitSort();
+  const scope = S.settings.searchScope || 'all', withDesc = S.settings.searchDesc !== false;
+  const sc = document.createElement('div'); sc.className = 'scrim search-scrim';
+  sc.innerHTML = `<div class="dialog search" role="dialog" aria-modal="true" aria-label="搜尋">
+    <div class="q-row"><span class="q-ic" aria-hidden="true">${I.search}</span><input id="qInput" type="search" placeholder="輸入名稱，空格分開可以找同時包含的" autocomplete="off" aria-label="搜尋文字"><button type="button" class="chip" data-q="close">關閉</button></div>
+    <div class="q-scopes" role="radiogroup" aria-label="搜尋範圍">${SCOPES.map(([k, n]) => `<button type="button" role="radio" class="q-scope" data-scope="${k}" aria-checked="${k === scope}">${n}</button>`).join('')}
+      <label class="q-desc"><input type="checkbox" id="qDesc" ${withDesc ? 'checked' : ''}> 也搜尋說明文字</label></div>
+    <div class="q-count" id="qCount" aria-live="polite"></div>
+    <ul class="q-list" id="qList" role="listbox" aria-label="搜尋結果"></ul>
+    <p class="hint">↑ ↓ 選擇，Enter 前往，${MOD} + Enter 直接編輯，Esc 關閉</p></div>`;
+  document.body.append(sc);
+  const inp = $('#qInput'); inp.value = S.lastQuery || ''; setTimeout(() => { inp.focus(); inp.select(); }, 30);
+  const draw = () => {
+    const sc2 = S.settings.searchScope || 'all', wd = S.settings.searchDesc !== false;
+    const list = runSearch(inp.value, sc2, wd); SR = { list, sel: 0 };
+    const ts = terms(inp.value);
+    $('#qCount').textContent = ts.length ? (list.length ? `找到 ${list.length} 筆` : '沒有找到，試試換個字或改搜尋範圍') : '輸入文字開始搜尋';
+    $('#qList').innerHTML = list.slice(0, 200).map((r, i) => `<li role="option" class="q-item ${i === 0 ? 'on' : ''}" data-i="${i}" aria-selected="${i === 0}">
+      <span class="q-tag ${r.kind}">${KIND_TAG[r.kind]}</span><span class="q-main"><span class="q-name">${r.html}</span><span class="q-sub">${esc(r.sub)}</span>${r.desc ? `<span class="q-snip">${r.desc}</span>` : ''}</span>
+      ${r.kind !== 'group' ? `<button type="button" class="chip" data-q="edit" data-i="${i}">編輯</button>` : ''}</li>`).join('');
+  };
+  const pick = (i, edit) => { const r = SR && SR.list[i]; if (!r) return; S.lastQuery = inp.value; save(); sc.remove(); goResult(r, edit); };
+  const move = d => {
+    if (!SR || !SR.list.length) return; SR.sel = clamp(SR.sel + d, 0, Math.min(SR.list.length, 200) - 1);
+    $('#qList').querySelectorAll('.q-item').forEach((li, i) => { li.classList.toggle('on', i === SR.sel); li.setAttribute('aria-selected', i === SR.sel); if (i === SR.sel) li.scrollIntoView({ block: 'nearest' }); });
+  };
+  inp.addEventListener('input', draw);
+  inp.addEventListener('keydown', e => {
+    if (e.isComposing) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); move(1); } else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
+    else if (e.key === 'Enter') { e.preventDefault(); pick(SR ? SR.sel : 0, e.ctrlKey || e.metaKey); }
+  });
+  sc.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); S.lastQuery = inp.value; sc.remove(); } });
+  sc.addEventListener('click', e => {
+    if (e.target === sc || e.target.closest('[data-q=close]')) { S.lastQuery = inp.value; sc.remove(); return; }
+    const s2 = e.target.closest('.q-scope'); if (s2) { S.settings.searchScope = s2.dataset.scope; save(); sc.querySelectorAll('.q-scope').forEach(b => b.setAttribute('aria-checked', b === s2)); draw(); inp.focus(); return; }
+    const ed = e.target.closest('[data-q=edit]'); if (ed) { pick(+ed.dataset.i, true); return; }
+    const li = e.target.closest('.q-item'); if (li) pick(+li.dataset.i, false);
+  });
+  $('#qDesc').addEventListener('change', e => { S.settings.searchDesc = e.target.checked; save(); draw(); inp.focus(); });
+  draw();
+}
+function goResult(r, edit) {
+  if (page !== 'main') { if (page === 'edit' && E.dirty) { toast('請先儲存或離開編輯頁'); return; } leaveToMain(false); }
+  if (r.kind === 'group') {
+    if (isPortrait()) openMenu(); else if (S.settings.leftCollapsed) { S.settings.leftCollapsed = false; renderMain(); }
+    const el = document.querySelector(`#groupList .group[data-key="${r.g.id}"]`);
+    if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.remove('found'); void el.offsetWidth; el.classList.add('found'); }
+    return;
+  }
+  r.g.cur = Math.max(0, r.g.timerIds.indexOf(r.t.id));
+  if (S.currentTimerId !== r.t.id) selectTimer(r.t.id); else renderGroups();
+  if (r.kind === 'item') selectItem(r.i);
+  if (edit) { openEdit(r.t.id); if (r.kind === 'item') { E.sel = r.i; if (isPortrait()) E.detail = true; renderEdit(); } return; }
+  const pill = document.querySelector(`#groupList .timer-pill[data-key="${r.t.id}"]`); if (pill) pill.scrollIntoView({ block: 'nearest' });
+  toast(r.kind === 'item' ? `${r.t.name} › ${r.t.items[r.i].title || '未命名'}` : r.t.name);
+}
+
+/* ---------- sound list search (settings) ---------- */
+function filterSounds() {
+  const inp = $('#sQuery'); if (!inp) return;
+  const ts = terms(inp.value); let n = 0;
+  document.querySelectorAll('#sndList .snd-row').forEach(row => {
+    const s = sndById(row.dataset.key); const ok = !ts.length || (s && (hit(s.name, ts) || hit(s.fileName, ts)));
+    row.hidden = !ok; if (ok) n++;
+  });
+  const c = $('#sCount'); if (c) c.textContent = ts.length ? `${n} 個符合` : '';
+  S.sndQuery = inp.value;
 }
 
 /* ================= boot ================= */
