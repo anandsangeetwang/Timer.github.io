@@ -590,6 +590,38 @@ kbd{font-family:var(--num);background:var(--panel-2);border:1px solid var(--pane
 .s-search svg{width:16px;height:16px;color:var(--arrow);flex:none}
 .s-search input{flex:1;min-width:0;border:0;outline:none;background:transparent;font-size:14px;color:var(--ink)}
 .s-search #sCount{font-size:11px;color:var(--ink-soft);white-space:nowrap}
+/* ===== v3.4 module note + #tags ===== */
+.tag{display:inline-flex;align-items:center;gap:3px;margin:2px 3px 2px 0;padding:2px 8px;border-radius:999px;border:0;font:inherit;font-size:13px;line-height:1.5;
+  background:#e7f0de;color:var(--green);font-weight:700;vertical-align:baseline;cursor:pointer;white-space:nowrap}
+span.tag{cursor:default}
+.tag.on,.tag[aria-pressed="true"]{background:var(--green);color:#fff}
+.tag.add{background:rgba(255,255,255,.7);border:1px dashed var(--green)}
+.tag small{font-size:11px;opacity:.7;font-weight:600}
+.tn-l{font-size:12px;color:var(--ink-soft);margin-right:6px}
+.fpanel.note{width:300px}
+.tn-name{font-weight:800;margin-bottom:6px;overflow-wrap:anywhere}
+.tn-body{font-size:15px;line-height:1.7;max-height:50vh;overflow:auto;overflow-wrap:anywhere;background:rgba(255,255,255,.45);border-radius:10px;padding:8px 10px;-webkit-user-select:text;user-select:text}
+.tn-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;align-items:center}
+.tn-foot .save-btn{padding:7px 16px;font-size:15px}
+.tn-ta{width:100%;min-height:130px;resize:vertical;font:inherit;font-size:15px;line-height:1.6;border-radius:10px;border:1px solid #c9d4bd;padding:8px 10px;background:#fff;color:var(--ink)}
+.tn-pre,.tn-sug{margin-top:6px;display:flex;flex-wrap:wrap;align-items:center}
+.note-dot{background:var(--green);animation:none}
+.note-btn{flex:none;display:inline-flex;align-items:center;gap:6px;border:2px solid var(--green);color:var(--green);background:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-weight:700;cursor:pointer}
+.note-btn b{background:var(--green);color:#fff;border-radius:999px;padding:0 7px;font-size:12px}
+.note-dlg{width:min(560px,94vw)}
+.note-dlg .tn-ta{min-height:180px}
+.q-tagbar{display:flex;flex-wrap:wrap;align-items:center;max-height:84px;overflow:auto;margin:2px 0 4px}
+.q-tagbar:empty{display:none}
+.q-any{display:inline-flex;margin-left:auto;border:1px solid var(--green);border-radius:999px;overflow:hidden}
+.q-any button{border:0;background:#fff;color:var(--green);font:inherit;font-size:12px;padding:2px 10px;cursor:pointer}
+.q-any button[aria-checked="true"]{background:var(--green);color:#fff}
+.q-tags{display:flex;flex-wrap:wrap}
+.q-tags .tag{font-size:11px;padding:0 6px}
+@media (max-width:700px){
+  .fpanel.note{width:auto}
+  .note-btn span{display:none}
+  .note-btn::before{content:"說明"}
+}
 </style></head><body>
 <div class="app" id="app"></div>
 <div class="flash" id="flash"></div>
@@ -1097,6 +1129,7 @@ function buildShell() {
   <div class="controls"><button class="ctl" data-act="reset" aria-label="重來">${I.reset}</button><button class="ctl play" id="playBtn" data-act="toggle" aria-label="開始"></button></div>
 </div>
 <div class="ftabs" id="ftabs">
+  <button class="ftab" data-tab="note" aria-expanded="false" aria-controls="fp-note"><span class="sw-dot note-dot" id="noteDot" hidden></span>${[...'模組說明'].map(c => `<i>${c}</i>`).join('')}</button>
   <button class="ftab" data-tab="ratio" aria-expanded="false" aria-controls="fp-ratio">${[...'時間比例'].map(c => `<i>${c}</i>`).join('')}</button>
   <button class="ftab" data-tab="sound" aria-expanded="false" aria-controls="fp-sound">${[...'音效模式'].map(c => `<i>${c}</i>`).join('')}</button>
   <button class="ftab" data-tab="sw" aria-expanded="false" aria-controls="fp-sw"><span class="sw-dot" id="swDot" hidden></span>${[...'碼表'].map(c => `<i>${c}</i>`).join('')}</button>
@@ -1105,6 +1138,7 @@ function buildShell() {
     <div class="ratio-row"><button class="mini" data-act="rdown" aria-label="減少">−</button><input class="ratio-val num" id="ratioInput" inputmode="decimal" aria-label="倍率"><button class="mini" data-act="rup" aria-label="增加">＋</button></div>
     <div class="kv" id="rKv"></div>
   </div>
+  <div class="fpanel note" id="fp-note" hidden></div>
   <div class="fpanel" id="fp-sound" hidden><h3>音效模式</h3><div id="modeList" role="radiogroup" aria-label="音效模式"></div></div>
   <div class="fpanel sw" id="fp-sw" hidden>
     <h3>碼表</h3>
@@ -1116,7 +1150,7 @@ function buildShell() {
   </div>
 </div>
 <div class="page edit" id="pEdit" hidden>
-  <div class="edit-head"><input class="name-input" id="eName" maxlength="30" aria-label="計時器名稱"><button class="sort-btn keys-btn" data-act="keys" title="快捷鍵（F1）" aria-label="快捷鍵清單">${I.keys}</button><button class="save-btn" data-act="save">儲存</button></div>
+  <div class="edit-head"><input class="name-input" id="eName" maxlength="30" aria-label="計時器名稱"><button type="button" class="note-btn" data-act="noteDlg" title="模組說明（Alt + M）"><span>模組說明</span><b id="eNoteN"></b></button><button class="sort-btn keys-btn" data-act="keys" title="快捷鍵（F1）" aria-label="快捷鍵清單">${I.keys}</button><button class="save-btn" data-act="save">儲存</button></div>
   <div class="edit-list"><div class="edit-items" id="eItems"></div><button class="add-item" data-act="addItem">${I.plus}新增計時項目</button><p class="hint" id="eHint"></p></div>
   <div class="form" id="eForm"></div>
   <div class="media"><div class="image-box" id="eImg" data-act="pickImg" role="button" tabindex="0" aria-label="選擇圖片"></div>
@@ -1219,7 +1253,7 @@ function renderDrawers() {
   $('#modeList').innerHTML = modes.map(([k, n, d]) => `<button class="mode-opt" role="radio" aria-checked="${S.settings.soundMode === k}" data-act="mode" data-m="${k}"><span class="box"></span><span>${n}<small>${d}</small></span></button>`).join('');
 }
 /* ---------- floating drawers (time ratio, sound mode, stopwatch) ---------- */
-const TAB_DEFAULTS = { ratio: { x: 1, y: .26 }, sound: { x: 1, y: .5 }, sw: { x: 1, y: .74 } };
+const TAB_DEFAULTS = { note: { x: 1, y: .99 }, ratio: { x: 1, y: .26 }, sound: { x: 1, y: .5 }, sw: { x: 1, y: .74 } };
 function tabPos(k) { const t = (S.settings.tabs || {})[k]; return t && isFinite(t.x) ? t : TAB_DEFAULTS[k]; }
 function renderTabs() {
   const box = $('#ftabs'); if (!box) return;
@@ -1232,10 +1266,11 @@ function renderTabs() {
     el.classList.toggle('edge-l', x < 2); el.classList.toggle('edge-r', x > innerWidth - w - 2);
     el.setAttribute('aria-expanded', openDrawer === k);
   }
+  updNoteDot(); if (openDrawer === 'note') renderNote();
   placePanel();
 }
 function placePanel() {
-  for (const k of ['ratio', 'sound', 'sw']) $('#fp-' + k).hidden = openDrawer !== k;
+  for (const k of ['note', 'ratio', 'sound', 'sw']) $('#fp-' + k).hidden = openDrawer !== k;
   if (!openDrawer) return;
   const pnl = $('#fp-' + openDrawer), tab = document.querySelector(`.ftab[data-tab="${openDrawer}"]`);
   if (isPortrait()) { pnl.style.left = pnl.style.top = ''; return; } // bottom sheet on phones
@@ -1245,8 +1280,9 @@ function placePanel() {
   pnl.style.top = clamp(r.top, 6, innerHeight - ph - 6) + 'px';
 }
 function setDrawer(which) {
+  if (openDrawer === 'note' && NT.editing) noteCommit(true); // leaving the note drawer keeps what was typed
   openDrawer = openDrawer === which ? null : which;
-  if (openDrawer === 'sw') renderSW(); else if (openDrawer) renderDrawers();
+  if (openDrawer === 'sw') renderSW(); else if (openDrawer === 'note') { NT.tid = null; renderNote(); } else if (openDrawer) renderDrawers();
   renderTabs();
 }
 function closeDrawers() { if (openDrawer) setDrawer(openDrawer); }
@@ -1498,7 +1534,7 @@ document.addEventListener('selectionchange', () => {
 const E = { draft: null, isNew: false, g: 0, sel: 0, dirty: false, detail: false };
 function openEdit(timerId, gi) {
   E.isNew = !timerId; E.g = gi ?? 0; E.sel = 0; E.dirty = false; E.detail = false;
-  E.draft = timerId ? clone(S.timers[timerId]) : { id: uid(), name: '新的計時器', ratio: 1, globalSound: 'none', items: [newItem(1)] };
+  E.draft = timerId ? clone(S.timers[timerId]) : { id: uid(), name: '新的計時器', note: '', ratio: 1, globalSound: 'none', items: [newItem(1)] };
   if (E.isNew) E.dirty = true;
   showPage('edit'); renderEdit();
   if (E.isNew) setTimeout(() => { const n = $('#eName'); n.focus(); n.select(); }, 80);
@@ -1506,7 +1542,7 @@ function openEdit(timerId, gi) {
 const selItem = () => E.draft.items[E.sel];
 function renderEdit() {
   $('#pEdit').classList.toggle('detail', !!E.detail);
-  $('#eName').value = E.draft.name;
+  $('#eName').value = E.draft.name; updNoteBtn();
   $('#eHint').textContent = (matchMedia('(pointer:coarse)').matches ? '往左滑' : `按住 ${S.settings.longPress} 秒`) + '可以刪除項目或多選';
   renderEditList(); renderEditForm(); renderEditMedia();
 }
@@ -2373,6 +2409,7 @@ async function cleanMedia() {
   try { const used = referencedMedia(S); for (const k of await Store.mediaKeys()) if (!used.has(k)) await Store.delMedia(k); } catch {}
 }
 
+const APP_VER = '3.4';
 /* ================= image composer (layout editor) ================= */
 const FABRIC_SRC = 'fabric.min.js'; // fabric is normally bundled into the page
 const ASPECTS = { '4:3': [1200, 900], '16:9': [1280, 720], '1:1': [1000, 1000], '3:4': [900, 1200] };
@@ -2804,9 +2841,9 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
 const MOD = isMac ? '⌘' : 'Ctrl';
 const SHORTCUTS = {
   main: [['空白鍵', '開始／暫停'], ['R', '重來'], ['↑ ／ ↓', '上一個／下一個項目'], ['1～9', '跳到第 N 個項目'], ['← ／ →', '同一群組的上一個／下一個計時器'],
-    ['E', '編輯目前的計時器'], ['W', '開關碼表'], ['L', '碼表記錄一筆'], ['F', '全螢幕'], ['S', '進入／離開排序模式'], [MOD + ' + K 或 /', '搜尋群組、計時器模組、計時器'], ['滑鼠雙擊項目', '切換到該項目並開始'], ['Esc', '關閉抽屜／返回'], ['? 或 F1', '顯示這份清單']],
+    ['E', '編輯目前的計時器'], ['N', '開關模組說明'], ['W', '開關碼表'], ['L', '碼表記錄一筆'], ['F', '全螢幕'], ['S', '進入／離開排序模式'], [MOD + ' + K 或 /', '搜尋群組、計時器模組、計時器（#標籤 可找模組）'], ['滑鼠雙擊項目', '切換到該項目並開始'], ['Esc', '關閉抽屜／返回'], ['? 或 F1', '顯示這份清單']],
   edit: [[MOD + ' + S', '儲存'], [MOD + ' + K', '搜尋（未儲存時會先提醒）'], ['Esc', '返回（未儲存會先詢問）'], ['Alt + ↑ ／ ↓', '選上一個／下一個項目'], ['Alt + Shift + ↑ ／ ↓', '把目前項目上移／下移'],
-    ['Alt + N', '新增計時項目'], ['Alt + C', '複製目前項目'], ['Alt + Delete', '刪除目前項目'], ['Alt + T', '切換倒數計時／計時器'], ['Alt + I', '打開圖片排版'],
+    ['Alt + N', '新增計時項目'], ['Alt + C', '複製目前項目'], ['Alt + Delete', '刪除目前項目'], ['Alt + T', '切換倒數計時／計時器'], ['Alt + I', '打開圖片排版'], ['Alt + M', '編輯模組說明（#標籤）'],
     ['Alt + 1 ／ 2 ／ 3', '跳到標題／時間／說明'], ['↑ ／ ↓（時間、次數欄）', '加減 1，按住 Shift 加減 10'], [MOD + ' + B', '說明文字粗體'], [MOD + ' + Shift + > ／ <', '說明文字字級 +2 ／ −2'], ['F1（或不在輸入框時按 ?）', '顯示這份清單']],
   compose: [['V ／ P ／ T', '選取／畫筆／文字'], ['R ／ O ／ A ／ L', '方框／圓圈／箭頭／直線'], ['I', '加入圖片'], ['C', '裁切（Enter 套用、Esc 取消）'], ['Shift + R', '旋轉 90°'],
     ['] ／ [', '上移一層／下移一層'], ['方向鍵', '移動 1 點，Shift 一次 10 點'], [MOD + ' + C ／ V', '複製／貼上物件'], [MOD + ' + D', '原地複製'], ['Delete', '刪除選取'],
@@ -2869,6 +2906,7 @@ function initShortcuts() {
       else if (k === 'ArrowLeft' || k === 'ArrowRight') { e.preventDefault(); moveTimerInGroup(k === 'ArrowRight' ? 1 : -1); }
       else if ((k === 'e' || k === 'E') && t) openEdit(S.currentTimerId);
       else if (k === 'w' || k === 'W') setDrawer('sw');
+      else if (k === 'n' || k === 'N') setDrawer('note');
       else if ((k === 'l' || k === 'L') && (openDrawer === 'sw' || S.sw.running)) swAct('lap');
       else if (k === 'f' || k === 'F') toggleFullscreen();
       else if (k === 's' || k === 'S') enterSort();
@@ -2887,7 +2925,7 @@ function initShortcuts() {
         Delete: () => { const it = selItem(); if (it) confirmDelete('item', [it.id]); },
         Backspace: () => { const it = selItem(); if (it) confirmDelete('item', [it.id]); },
         KeyT: () => { const it = selItem(); if (it) ACT.setMode({ dataset: { m: it.mode === 'down' ? 'up' : 'down' } }); },
-        KeyI: () => openComposer(),
+        KeyI: () => openComposer(), KeyM: () => noteDialog(),
         Digit1: () => focusEdit(1), Digit2: () => focusEdit(2), Digit3: () => focusEdit(3),
       }[code];
       if (act) { e.preventDefault(); act(); }
@@ -2911,6 +2949,18 @@ function initShortcuts() {
 const SCOPES = [['all', '全部'], ['group', '群組'], ['timer', '計時器模組'], ['item', '計時器']];
 const normTxt = s => String(s || '').normalize('NFKC').toLowerCase();
 const terms = q => normTxt(q).split(/\s+/).filter(Boolean);
+// "#暖身" terms search module tags; everything else searches names (and descriptions when chosen)
+function splitQ(q) {
+  const tt = [], xt = [];
+  for (const w of terms(q)) { if (/^[#＃]/.test(w)) { const k = w.replace(/^[#＃]+/, ''); if (k) tt.push(k); } else xt.push(w); }
+  return { tt, xt };
+}
+const tagHit = (t, tt) => {
+  if (!tt.length) return true;
+  const tags = noteTags(t.note).map(normTxt), one = k => tags.some(x => x.startsWith(k));
+  return S.settings.tagAny ? tt.some(one) : tt.every(one);
+};
+const tagsHTML = (t, tt) => { const tg = noteTags(t.note); return tg.length ? `<span class="q-tags">${tg.map(x => `<span class="tag ${tt.some(k => normTxt(x).startsWith(k)) ? 'on' : ''}">#${esc(x)}</span>`).join('')}</span>` : ''; };
 const hit = (text, ts) => { const n = normTxt(text); return ts.every(t => n.includes(t)); };
 function mark(text, ts) {
   let html = esc(text); if (!ts.length) return html;
@@ -2932,47 +2982,55 @@ function snippet(text, ts) {
   return (a > 0 ? '…' : '') + src.slice(a, a + 48) + (a + 48 < src.length ? '…' : '');
 }
 function runSearch(q, scope, withDesc) {
-  const ts = terms(q); if (!ts.length) return [];
+  const { tt, xt: ts } = splitQ(q); if (!tt.length && !ts.length) return [];
   const out = [];
-  const groupOf = id => S.groups.find(g => g.timerIds.includes(id));
-  if (scope === 'all' || scope === 'group')
+  if ((scope === 'all' || scope === 'group') && !tt.length)
     for (const g of S.groups) if (hit(g.name, ts)) out.push({ kind: 'group', g, html: mark(g.name, ts), sub: `${g.timerIds.length} 個計時器模組` });
   if (scope === 'all' || scope === 'timer')
-    for (const g of S.groups) for (const id of g.timerIds) { const t = S.timers[id]; if (t && hit(t.name, ts)) out.push({ kind: 'timer', g, t, html: mark(t.name, ts), sub: `${g.name} · ${t.items.length} 個計時器` }); }
-  if (scope === 'all' || scope === 'item')
     for (const g of S.groups) for (const id of g.timerIds) {
-      const t = S.timers[id]; if (!t) continue;
+      const t = S.timers[id]; if (!t || !tagHit(t, tt)) continue;
+      const note = t.note || '', inName = hit(t.name, ts), inNote = !inName && withDesc && note && hit(note, ts);
+      if (inName || inNote) out.push({ kind: 'timer', g, t, html: mark(t.name, ts), sub: `${g.name} · ${t.items.length} 個計時器`, tags: tagsHTML(t, tt), desc: inNote && ts.length ? mark(snippet(note, ts), ts) : '' });
+    }
+  // items: a tag-only search lists the items of tagged modules only when the scope is 計時器
+  if (scope === 'item' || (scope === 'all' && ts.length))
+    for (const g of S.groups) for (const id of g.timerIds) {
+      const t = S.timers[id]; if (!t || !tagHit(t, tt)) continue;
       t.items.forEach((it, i) => {
-        const inTitle = hit(it.title, ts), d = withDesc ? plain(it) : '', inDesc = !inTitle && d && hit(d, ts);
+        const inTitle = hit(it.title, ts), d = withDesc && ts.length ? plain(it) : '', inDesc = !inTitle && d && hit(d, ts);
         if (inTitle || inDesc) out.push({ kind: 'item', g, t, i, html: `${i + 1}.${mark(it.title || '未命名', ts)}`, sub: `${g.name} › ${t.name}`, desc: inDesc ? mark(snippet(d, ts), ts) : '' });
       });
     }
-  void groupOf;
   return out;
 }
 const KIND_TAG = { group: '群組', timer: '模組', item: '計時器' };
 let SR = null; // { list, sel }
-function openSearch() {
-  if (document.querySelector('.search-scrim')) { $('#qInput').focus(); return; }
+function openSearch(q0) {
+  const open = document.querySelector('.search-scrim');
+  if (open) { const i = $('#qInput'); if (q0 != null) { i.value = q0; i.dispatchEvent(new Event('input')); } i.focus(); return; }
+  if (q0 != null && S.settings.searchScope === 'group') S.settings.searchScope = 'all';
   closeDrawers(); if (SORT) exitSort();
   const scope = S.settings.searchScope || 'all', withDesc = S.settings.searchDesc !== false;
   const sc = document.createElement('div'); sc.className = 'scrim search-scrim';
   sc.innerHTML = `<div class="dialog search" role="dialog" aria-modal="true" aria-label="搜尋">
-    <div class="q-row"><span class="q-ic" aria-hidden="true">${I.search}</span><input id="qInput" type="search" placeholder="輸入名稱，空格分開可以找同時包含的" autocomplete="off" aria-label="搜尋文字"><button type="button" class="chip" data-q="close">關閉</button></div>
+    <div class="q-row"><span class="q-ic" aria-hidden="true">${I.search}</span><input id="qInput" type="search" placeholder="輸入名稱或 #標籤，空格分開＝同時包含" autocomplete="off" aria-label="搜尋文字"><button type="button" class="chip" data-q="close">關閉</button></div>
     <div class="q-scopes" role="radiogroup" aria-label="搜尋範圍">${SCOPES.map(([k, n]) => `<button type="button" role="radio" class="q-scope" data-scope="${k}" aria-checked="${k === scope}">${n}</button>`).join('')}
       <label class="q-desc"><input type="checkbox" id="qDesc" ${withDesc ? 'checked' : ''}> 也搜尋說明文字</label></div>
+    <div class="q-tagbar" id="qTags"></div>
     <div class="q-count" id="qCount" aria-live="polite"></div>
     <ul class="q-list" id="qList" role="listbox" aria-label="搜尋結果"></ul>
     <p class="hint">↑ ↓ 選擇，Enter 前往，${MOD} + Enter 直接編輯，Esc 關閉</p></div>`;
   document.body.append(sc);
-  const inp = $('#qInput'); inp.value = S.lastQuery || ''; setTimeout(() => { inp.focus(); inp.select(); }, 30);
+  const inp = $('#qInput'); inp.value = q0 != null ? q0 : (S.lastQuery || ''); setTimeout(() => { inp.focus(); inp.select(); }, 30);
   const draw = () => {
     const sc2 = S.settings.searchScope || 'all', wd = S.settings.searchDesc !== false;
     const list = runSearch(inp.value, sc2, wd); SR = { list, sel: 0 };
-    const ts = terms(inp.value);
+    const ts = terms(inp.value), { tt } = splitQ(inp.value), tags = allTags();
+    $('#qTags').innerHTML = tags.length ? `<span class="tn-l">標籤</span>${tags.slice(0, 40).map(x => `<button type="button" class="tag ${tt.includes(normTxt(x.name)) ? 'on' : ''}" data-qtag="${esc(x.name)}" aria-pressed="${tt.includes(normTxt(x.name))}">#${esc(x.name)}<small>${x.n}</small></button>`).join('')}
+      ${tt.length > 1 ? `<span class="q-any" role="radiogroup" aria-label="多個標籤"><button type="button" role="radio" data-qany="0" aria-checked="${!S.settings.tagAny}">全部符合</button><button type="button" role="radio" data-qany="1" aria-checked="${!!S.settings.tagAny}">任一符合</button></span>` : ''}` : '';
     $('#qCount').textContent = ts.length ? (list.length ? `找到 ${list.length} 筆` : '沒有找到，試試換個字或改搜尋範圍') : '輸入文字開始搜尋';
     $('#qList').innerHTML = list.slice(0, 200).map((r, i) => `<li role="option" class="q-item ${i === 0 ? 'on' : ''}" data-i="${i}" aria-selected="${i === 0}">
-      <span class="q-tag ${r.kind}">${KIND_TAG[r.kind]}</span><span class="q-main"><span class="q-name">${r.html}</span><span class="q-sub">${esc(r.sub)}</span>${r.desc ? `<span class="q-snip">${r.desc}</span>` : ''}</span>
+      <span class="q-tag ${r.kind}">${KIND_TAG[r.kind]}</span><span class="q-main"><span class="q-name">${r.html}</span><span class="q-sub">${esc(r.sub)}</span>${r.tags || ''}${r.desc ? `<span class="q-snip">${r.desc}</span>` : ''}</span>
       ${r.kind !== 'group' ? `<button type="button" class="chip" data-q="edit" data-i="${i}">編輯</button>` : ''}</li>`).join('');
   };
   const pick = (i, edit) => { const r = SR && SR.list[i]; if (!r) return; S.lastQuery = inp.value; save(); sc.remove(); goResult(r, edit); };
@@ -2989,6 +3047,14 @@ function openSearch() {
   sc.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); S.lastQuery = inp.value; sc.remove(); } });
   sc.addEventListener('click', e => {
     if (e.target === sc || e.target.closest('[data-q=close]')) { S.lastQuery = inp.value; sc.remove(); return; }
+    const tg = e.target.closest('[data-qtag]');
+    if (tg) { // toggle this tag in the search box
+      const k = normTxt(tg.dataset.qtag), ws = inp.value.split(/\s+/).filter(Boolean);
+      const keep = ws.filter(w => !(/^[#＃]/.test(w) && normTxt(w.replace(/^[#＃]+/, '')) === k));
+      inp.value = (keep.length < ws.length ? keep : [...ws, '#' + tg.dataset.qtag]).join(' ') + ' ';
+      draw(); inp.focus(); return;
+    }
+    const qa = e.target.closest('[data-qany]'); if (qa) { S.settings.tagAny = qa.dataset.qany === '1'; save(); draw(); inp.focus(); return; }
     const s2 = e.target.closest('.q-scope'); if (s2) { S.settings.searchScope = s2.dataset.scope; save(); sc.querySelectorAll('.q-scope').forEach(b => b.setAttribute('aria-checked', b === s2)); draw(); inp.focus(); return; }
     const ed = e.target.closest('[data-q=edit]'); if (ed) { pick(+ed.dataset.i, true); return; }
     const li = e.target.closest('.q-item'); if (li) pick(+li.dataset.i, false);
@@ -3024,6 +3090,120 @@ function filterSounds() {
   S.sndQuery = inp.value;
 }
 
+/* ================= timer-module note with #tags (v3.4) ================= */
+// plain text; "#暖身" or "＃暖身" becomes a tag. Tags end at spaces and common punctuation.
+const TAG_RE = /[#＃]([^\s#＃,，.。、;；:：!！?？()（）\[\]【】「」『』"'<>]+)/g;
+function noteTags(note) {
+  const out = [], seen = new Set();
+  for (const m of String(note || '').matchAll(TAG_RE)) { const k = normTxt(m[1]); if (!seen.has(k)) { seen.add(k); out.push(m[1]); } }
+  return out;
+}
+function noteHTML(note) {
+  const s = String(note || ''); let out = '', last = 0;
+  for (const m of s.matchAll(TAG_RE)) {
+    out += esc(s.slice(last, m.index)) + `<button type="button" class="tag" data-act="tagFind" data-tag="${esc(m[1])}" title="搜尋有這個標籤的模組">#${esc(m[1])}</button>`;
+    last = m.index + m[0].length;
+  }
+  return (out + esc(s.slice(last))).replace(/\n/g, '<br>');
+}
+function allTags() {
+  const m = new Map();
+  for (const g of S.groups) for (const id of g.timerIds) {
+    const t = S.timers[id]; if (!t) continue;
+    for (const tg of noteTags(t.note)) { const k = normTxt(tg), e = m.get(k) || { name: tg, n: 0 }; e.n++; m.set(k, e); }
+  }
+  return [...m.values()].sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'zh-Hant'));
+}
+
+/* ---------- editor (shared by the drawer and the edit page) ---------- */
+function noteEditorHTML(v) {
+  return `<textarea class="tn-ta" maxlength="3000" placeholder="寫下這個模組的說明，用 #標籤 標記方便搜尋，例如：適合早上練習 #暖身 #20分鐘" aria-label="模組說明">${esc(v || '')}</textarea>
+  <div class="tn-pre" aria-live="polite"></div><div class="tn-sug"></div>`;
+}
+function bindNoteEditor(root, onOk) {
+  const ta = root.querySelector('.tn-ta'), pre = root.querySelector('.tn-pre'), sug = root.querySelector('.tn-sug');
+  const upd = () => {
+    const cur = noteTags(ta.value), have = new Set(cur.map(normTxt));
+    pre.innerHTML = cur.length ? `<span class="tn-l">標籤</span>${cur.map(x => `<span class="tag">#${esc(x)}</span>`).join('')}` : '<span class="muted">輸入 # 再接文字就會變成標籤，一個模組可以有很多個</span>';
+    const others = allTags().filter(x => !have.has(normTxt(x.name))).slice(0, 24);
+    sug.innerHTML = others.length ? `<span class="tn-l">點一下加入</span>${others.map(x => `<button type="button" class="tag add" data-addtag="${esc(x.name)}">#${esc(x.name)}</button>`).join('')}` : '';
+  };
+  ta.addEventListener('input', upd);
+  sug.addEventListener('click', e => {
+    const b = e.target.closest('[data-addtag]'); if (!b) return; e.stopPropagation();
+    const v = ta.value; ta.value = v + (v && !/\s$/.test(v) ? ' ' : '') + '#' + b.dataset.addtag + ' ';
+    upd(); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+  });
+  ta.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); onOk(); } });
+  upd();
+  return ta;
+}
+
+/* ---------- main screen drawer ---------- */
+const NT = { editing: false, tid: null };
+function updNoteDot() { const d = $('#noteDot'), t = curTimer(); if (d) d.hidden = !(t && t.note && t.note.trim()); }
+function noteCommit(quiet) {
+  const ta = $('#fp-note .tn-ta'), t = NT.tid && S.timers[NT.tid];
+  NT.editing = false;
+  if (!ta || !t) return;
+  const v = ta.value.replace(/\s+$/, '');
+  if (v !== (t.note || '')) { t.note = v; touch(t); save(); toast(quiet ? `已儲存「${t.name}」的說明` : '已儲存說明'); }
+  updNoteDot();
+}
+function renderNote() {
+  const p = $('#fp-note'); if (!p) return;
+  const t = curTimer();
+  if (NT.editing) { if (t && NT.tid === t.id) return; noteCommit(true); } // switched module while typing: keep the text
+  NT.tid = t ? t.id : null;
+  if (!t) { p.innerHTML = '<h3>模組說明</h3><p class="hint">還沒有選擇計時器模組</p>'; return; }
+  p.innerHTML = `<h3>模組說明</h3><div class="tn-name">${esc(t.name)}</div>
+    ${t.note && t.note.trim() ? `<div class="tn-body">${noteHTML(t.note)}</div>` : '<p class="hint">還沒有說明。可以寫下這個模組的重點，並用 #標籤 方便搜尋，例如 #暖身 #核心</p>'}
+    <div class="tn-foot"><button type="button" class="chip" data-act="noteEdit">${t.note && t.note.trim() ? '編輯' : '新增說明'}</button></div>`;
+}
+function noteEditInline() {
+  const t = curTimer(); if (!t) return;
+  if (openDrawer !== 'note') setDrawer('note');
+  NT.editing = true; NT.tid = t.id;
+  const p = $('#fp-note');
+  p.innerHTML = `<h3>模組說明</h3><div class="tn-name">${esc(t.name)}</div>${noteEditorHTML(t.note)}
+    <div class="tn-foot"><button type="button" class="chip" data-act="noteCancel">取消</button><button type="button" class="save-btn" data-act="noteSave">儲存</button></div>`;
+  const ta = bindNoteEditor(p, () => ACT.noteSave());
+  ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+  placePanel();
+}
+
+/* ---------- edit page dialog ---------- */
+function updNoteBtn() {
+  const b = $('#eNoteN'); if (!b || !E.draft) return;
+  const n = noteTags(E.draft.note).length, has = !!(E.draft.note && E.draft.note.trim());
+  b.textContent = n ? n + ' 標籤' : has ? '✓' : '';
+  b.hidden = !has;
+}
+function noteDialog() {
+  if (!E.draft || document.querySelector('.scrim')) return;
+  const s = document.createElement('div'); s.className = 'scrim';
+  s.innerHTML = `<div class="dialog note-dlg" role="dialog" aria-modal="true" aria-label="計時器模組說明"><h3>模組說明：${esc(E.draft.name || '')}</h3>
+    ${noteEditorHTML(E.draft.note)}<p class="hint">完成後記得按「儲存」。${MOD} + Enter 完成，Esc 取消</p>
+    <div class="btns"><button type="button" data-nd="cancel">取消</button><button type="button" class="primary" data-nd="ok">完成</button></div></div>`;
+  document.body.append(s);
+  const close = ok => {
+    if (ok) { const v = ta.value.replace(/\s+$/, ''); if (v !== (E.draft.note || '')) { E.draft.note = v; markDirty(); } updNoteBtn(); }
+    s.remove(); const nb = document.querySelector('.note-btn'); nb && nb.focus();
+  };
+  const ta = bindNoteEditor(s, () => close(true));
+  s.addEventListener('click', e => { const b = e.target.closest('[data-nd]'); if (b) close(b.dataset.nd === 'ok'); });
+  s.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); close(false); } });
+  setTimeout(() => { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }, 50);
+}
+
+Object.assign(ACT, {
+  noteEdit: () => noteEditInline(),
+  noteSave: () => { noteCommit(false); NT.tid = null; renderNote(); placePanel(); },
+  noteCancel: () => { NT.editing = false; NT.tid = null; renderNote(); placePanel(); },
+  noteDlg: () => noteDialog(),
+  tagFind: a => { closeDrawers(); openSearch('#' + a.dataset.tag); },
+});
+
 /* ================= boot ================= */
 (async () => {
   await Store.open();
@@ -3031,10 +3211,10 @@ function filterSounds() {
   try { DEV = await Store.get('device'); } catch {}
   if (!DEV) { DEV = 'd-' + uid(); await Store.set('device', DEV); }
   S = migrate(saved) || migrate(seed());
-  if (saved && S.appVer !== '3.2') { // keep a copy of the data as it was before this update
-    try { await Store.set('backup-pre-3.2', { at: Date.now(), snap: await buildSnapshot(false) }); } catch {}
-    S.appVer = '3.2';
-  } else if (!saved) S.appVer = '3.2';
+  if (saved && S.appVer !== APP_VER) { // keep a copy of the data as it was before this update
+    try { await Store.set('backup-pre-3.2', { at: Date.now(), from: S.appVer || '', snap: await buildSnapshot(false) }); } catch {}
+    S.appVer = APP_VER;
+  } else if (!saved) S.appVer = APP_VER;
   if (!S.timers[S.currentTimerId]) { const g = S.groups.find(g => g.timerIds.length); S.currentTimerId = g ? g.timerIds[0] : null; }
   save();
   if (!S.sw) S.sw = SWdef();
