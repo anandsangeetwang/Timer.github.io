@@ -622,6 +622,27 @@ span.tag{cursor:default}
   .note-btn span{display:none}
   .note-btn::before{content:"說明"}
 }
+/* ===== v3.5 copy + swipe tray ===== */
+[data-del].tray-open{transition:transform .18s ease}
+.sw-tray{position:fixed;z-index:88;display:flex;gap:4px;padding:2px 0 2px 4px;animation:trayIn .15s ease}
+@keyframes trayIn{from{opacity:0}to{opacity:1}}
+.sw-tray button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:0;border-radius:14px;font:inherit;font-size:12px;font-weight:700;color:#fff;cursor:pointer;min-width:0}
+.sw-tray svg{width:24px;height:24px}
+.sw-tray .tr-copy{background:var(--green)}
+.sw-tray .tr-del{background:var(--pink-deep)}
+.copy-dlg{width:min(480px,94vw)}
+.cp-body{display:flex;flex-direction:column;gap:8px;min-height:0}
+.cp-name{display:flex;align-items:center;gap:8px;font-weight:700}
+.cp-name input{flex:1;min-width:0;font:inherit;font-size:16px;padding:6px 10px;border-radius:10px;border:1px solid #c9d4bd}
+.cp-what{margin:0;font-size:14px;color:var(--ink-soft);overflow-wrap:anywhere}
+.cp-h{font-weight:700;font-size:14px}
+.cp-list{max-height:min(46vh,360px);overflow:auto;display:flex;flex-direction:column;gap:4px;padding:2px}
+.cp-g{font-size:12px;color:var(--ink-soft);font-weight:700;margin:6px 2px 0}
+.cp-opt{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:#f1f4ee;cursor:pointer}
+.cp-opt:has(input:checked){background:#dcebcf;box-shadow:inset 0 0 0 2px var(--green)}
+.cp-opt input{accent-color:var(--green);width:18px;height:18px;flex:none}
+.cp-n{flex:1;min-width:0;overflow-wrap:anywhere;font-weight:700}
+.cp-opt small{color:var(--ink-soft);font-size:12px;flex:none}
 </style></head><body>
 <div class="app" id="app"></div>
 <div class="flash" id="flash"></div>
@@ -1186,6 +1207,7 @@ function renderMain() {
 }
 const ck = on => `<span class="ck ${on ? 'on' : ''}" aria-hidden="true"></span>`;
 function renderGroups() {
+  closeTray(true);
   setTimeout(() => fitAll($('#groupList')), 0);
   $('#sortBar').hidden = !SORT; $('#groups').classList.toggle('sorting-mode', SORT);
   if (SORT) { $('#groupList').innerHTML = sortGroupsHTML(); return; }
@@ -1543,10 +1565,11 @@ const selItem = () => E.draft.items[E.sel];
 function renderEdit() {
   $('#pEdit').classList.toggle('detail', !!E.detail);
   $('#eName').value = E.draft.name; updNoteBtn();
-  $('#eHint').textContent = (matchMedia('(pointer:coarse)').matches ? '往左滑' : `按住 ${S.settings.longPress} 秒`) + '可以刪除項目或多選';
+  $('#eHint').textContent = matchMedia('(pointer:coarse)').matches ? '往左滑可以複製或刪除計時器' : `按住 ${S.settings.longPress} 秒或按右鍵，可以複製、刪除或多選`;
   renderEditList(); renderEditForm(); renderEditMedia();
 }
 function renderEditList() {
+  closeTray(true);
   setTimeout(() => fitAll($('#eItems')), 0);
   const sm = SEL && SEL.kind === 'item';
   $('#eItems').innerHTML = E.draft.items.map((it, i) => `<div class="erow ${i === E.sel && !sm ? 'sel' : ''}" data-i="${i}" data-del="item" data-key="${it.id}" ${sm ? `role="checkbox" aria-checked="${SEL.keys.has(it.id)}" tabindex="0"` : ''}>${sm ? ck(SEL.keys.has(it.id)) : `<span class="handle" data-drag="${i}" aria-label="拖曳排序">${I.handle}</span>`}<button class="item-pill" ${sm ? 'tabindex="-1"' : `data-act="selItem" data-i="${i}"`}><span class="tx" data-fit="2">${i + 1}.${esc(it.title || '未命名')}</span></button></div>`).join('')
@@ -1661,6 +1684,7 @@ const SV = { view: 'sound', sel: 'vibrate', detail: false };
 const prev = { el: null, id: null };
 function stopPreview() { if (prev.el) { prev.el.pause(); } prev.id = null; updatePreviewUI(); }
 function renderSettings() {
+  closeTray(true);
   setTimeout(() => { fitAll($('#pSet')); filterSounds(); }, 0);
   $('#pSet').classList.toggle('detail', !!SV.detail);
   if (!sndById(SV.sel)) SV.sel = S.sounds[0] && S.sounds[0].id;
@@ -1697,7 +1721,7 @@ function generalHTML() {
   return `<h1>一般設定</h1>
   <div class="card"><h2>漸進模式</h2><p>有設定「過程」或「全域」音效時，開始後聲音慢慢變大、結束前慢慢變小。在主畫面的「音效模式」選「漸進模式」就會套用。</p>
     <div class="line"><span>開始淡入</span>${stepper('fadeIn', st.fadeIn)}</div><div class="line"><span>結束淡出</span>${stepper('fadeOut', st.fadeOut)}</div></div>
-  <div class="card"><h2>刪除</h2><p>電腦用滑鼠按住項目不放，觸控螢幕把項目往左滑，就會出現「刪除」和「多選」。適用於群組、計時器、計時項目和自己上傳的音效。</p>
+  <div class="card"><h2>複製與刪除</h2><p>觸控螢幕：把項目往左滑，右邊會出現「複製」和垃圾桶，點垃圾桶才會詢問是否刪除；點其他地方就收回。電腦：用滑鼠按住項目不放或按右鍵，會出現「複製到…」「刪除」和「多選」。計時器模組可以複製到任何群組，計時器可以複製到任何計時器模組；群組和自己上傳的音效可以刪除。</p>
     <div class="line"><span>滑鼠按住秒數</span>${stepper('longPress', st.longPress)}</div></div>
   <div class="card"><h2>螢幕常亮</h2><p>計時進行中會盡量讓螢幕不自動關閉。裝置不支援時，按下開始會提醒你調整系統設定。</p>
     <div class="line"><span>無法保持亮螢時提醒我</span><button class="toggle" role="switch" aria-checked="${!!st.wakeRemind}" data-act="wakeRemind" aria-label="無法保持亮螢時提醒我"></button></div></div>
@@ -2108,7 +2132,7 @@ const fmtTime = ts => ts ? new Date(ts).toLocaleString('zh-TW', { month: 'numeri
 /* ================= delete: long-press / swipe / multi-select ================= */
 let SEL = null; // { kind, ctx, keys:Set }
 let swallowClick = false;
-const KIND_LABEL = { group: '群組', timer: '計時器', item: '計時項目', sound: '音效' };
+const KIND_LABEL = { group: '群組', timer: '計時器模組', item: '計時器', sound: '音效' };
 function delName(kind, key) {
   if (kind === 'group') { const g = S.groups.find(g => g.id === key); return g ? g.name : ''; }
   if (kind === 'timer') return (S.timers[key] || {}).name || '';
@@ -2121,11 +2145,13 @@ function canDelete(kind, key) {
   return true;
 }
 async function openDelMenu(kind, key, ctx) {
-  if (SEL || !canDelete(kind, key)) return;
-  const r = await dialog({ title: `${KIND_LABEL[kind]}「${delName(kind, key)}」`, body: '要刪除它，還是選擇多個一起刪除？',
-    buttons: [{ label: '取消', value: null }, { label: '多選', value: 'multi' }, { label: '刪除', value: 'del', danger: true }] });
-  if (r.value === 'del') confirmDelete(kind, [key], ctx);
+  const canCopy = kind === 'timer' || kind === 'item';
+  if (SEL || (!canCopy && !canDelete(kind, key))) return;
+  const r = await dialog({ title: `${KIND_LABEL[kind]}「${delName(kind, key)}」`, body: canCopy ? '要複製、刪除，還是選擇多個一起處理？' : '要刪除它，還是選擇多個一起刪除？',
+    buttons: [{ label: '取消', value: null }, { label: '多選', value: 'multi' }, ...(canCopy ? [{ label: '複製到…', value: 'copy' }] : []), { label: '刪除', value: 'del', danger: true }] });
+  if (r.value === 'del') { if (canDelete(kind, key)) confirmDelete(kind, [key], ctx); }
   else if (r.value === 'multi') enterSelect(kind, ctx, key);
+  else if (r.value === 'copy') copyAsk(kind, key, ctx);
 }
 function enterSelect(kind, ctx, key) {
   SEL = { kind, ctx, keys: new Set(key ? [key] : []) };
@@ -2149,7 +2175,7 @@ function renderForSel(all) {
 function renderSelbar() {
   const b = $('#selbar'); if (!SEL) { b.hidden = true; return; }
   const n = SEL.keys.size, allN = selUniverse().length;
-  b.innerHTML = `<span>已選 <b class="num">${n}</b> 個${KIND_LABEL[SEL.kind]}</span><button type="button" data-act="selAll">${n === allN && n ? '全不選' : '全選'}</button><button type="button" class="danger" data-act="selDelete" ${n ? '' : 'disabled'}>刪除</button><button type="button" data-act="selCancel">取消</button>`;
+  b.innerHTML = `<span>已選 <b class="num">${n}</b> 個${KIND_LABEL[SEL.kind]}</span><button type="button" data-act="selAll">${n === allN && n ? '全不選' : '全選'}</button>${SEL.kind === 'timer' || SEL.kind === 'item' ? `<button type="button" data-act="selCopy" ${n ? '' : 'disabled'}>複製到…</button>` : ''}<button type="button" class="danger" data-act="selDelete" ${n ? '' : 'disabled'}>刪除</button><button type="button" data-act="selCancel">取消</button>`;
   b.hidden = false;
 }
 function toggleSel(key) {
@@ -2164,14 +2190,17 @@ function soundUsage(ids) {
 }
 async function confirmDelete(kind, keys, ctx) {
   if (!keys.length) return;
-  const names = keys.map(k => `「${esc(delName(kind, k))}」`);
-  let body = keys.length === 1 ? `${names[0]}會被刪除。` : `${keys.length} 個${KIND_LABEL[kind]}會被刪除：${names.slice(0, 5).join('、')}${keys.length > 5 ? ' 等' : ''}。`;
-  if (kind === 'group') { const n = keys.reduce((a, k) => a + ((S.groups.find(g => g.id === k) || {}).timerIds || []).length, 0); if (n) body += `<br>裡面的 ${n} 個計時器也會一起刪除。`; }
-  if (kind === 'sound') { const n = soundUsage(keys); if (n) body += `<br>有 ${n} 個地方正在使用，刪除後會改成「無」。`; }
-  if (kind === 'item') body += '<br>按「儲存」後才會真正生效。';
-  const r = await dialog({ title: '確定要刪除？', body, buttons: [{ label: '取消', value: 0 }, { label: '刪除', value: 1, danger: true }] });
+  const r = await dialog({ title: '確定要刪除？', body: delBody(kind, keys), buttons: [{ label: '取消', value: 0 }, { label: '刪除', value: 1, danger: true }] });
   if (!r.value) return;
   doDelete(kind, keys, ctx);
+}
+function delBody(kind, keys) {
+  const names = keys.map(k => `「${esc(delName(kind, k))}」`);
+  let body = keys.length === 1 ? `${names[0]}會被刪除。` : `${keys.length} 個${KIND_LABEL[kind]}會被刪除：${names.slice(0, 5).join('、')}${keys.length > 5 ? ' 等' : ''}。`;
+  if (kind === 'group') { const n = keys.reduce((a, k) => a + ((S.groups.find(g => g.id === k) || {}).timerIds || []).length, 0); if (n) body += `<br>裡面的 ${n} 個計時器模組也會一起刪除。`; }
+  if (kind === 'sound') { const n = soundUsage(keys); if (n) body += `<br>有 ${n} 個地方正在使用，刪除後會改成「無」。`; }
+  if (kind === 'item') body += '<br>按「儲存」後才會真正生效。';
+  return body;
 }
 function doDelete(kind, keys) {
   const set = new Set(keys);
@@ -2179,7 +2208,7 @@ function doDelete(kind, keys) {
     const snap = clone(E.draft.items), selSnap = E.sel;
     E.draft.items = E.draft.items.filter(i => !set.has(i.id)); E.sel = clamp(E.sel, 0, Math.max(0, E.draft.items.length - 1)); E.detail = false; markDirty();
     exitSelect(); renderEdit();
-    toast(`已刪除 ${keys.length} 個計時項目`, () => { E.draft.items = snap; E.sel = selSnap; renderEdit(); });
+    toast(`已刪除 ${keys.length} 個計時器`, () => { E.draft.items = snap; E.sel = selSnap; renderEdit(); });
     return;
   }
   const snap = clone(S), curBefore = S.currentTimerId;
@@ -2217,13 +2246,14 @@ function doDelete(kind, keys) {
   });
 }
 function initDeleteGestures() {
-  let lp = null, sw = null;
+  let lp = null, sw = null, lastPT = '';
   const ring = document.createElement('div'); ring.className = 'lp-ring'; ring.hidden = true;
   ring.innerHTML = '<svg viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="24" fill="rgba(255,255,255,.85)"/><circle class="arc" cx="28" cy="28" r="24" fill="none" stroke-width="6"/></svg>';
   document.body.append(ring);
   const cancelLp = () => { if (lp) { clearTimeout(lp.t0); clearTimeout(lp.t1); lp = null; } ring.hidden = true; };
   document.addEventListener('pointerdown', e => {
-    if (SEL || SORT || e.target.closest('[data-drag],.pencil,.selbar,.scrim')) return;
+    lastPT = e.pointerType;
+    if (SEL || SORT || e.target.closest('[data-drag],.pencil,.selbar,.scrim,.sw-tray')) return;
     const el = e.target.closest('[data-del]'); if (!el) return;
     const info = { el, kind: el.dataset.del, key: el.dataset.key, ctx: el.dataset.ctx, x: e.clientX, y: e.clientY };
     if (e.pointerType === 'mouse') {
@@ -2245,7 +2275,7 @@ function initDeleteGestures() {
         if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) { sw = null; return; }
         if (dx < -12 && Math.abs(dx) > Math.abs(dy) * 1.2) { sw.active = true; sw.el.classList.add('swiping'); try { sw.el.setPointerCapture(e.pointerId); } catch {} }
       }
-      if (sw.active) { sw.dx = Math.max(dx, -140); sw.el.style.transform = `translateX(${Math.min(0, sw.dx)}px)`; sw.el.classList.toggle('armed', sw.dx < -70); }
+      if (sw.active) { sw.dx = Math.max(dx, -150); sw.el.style.transform = `translateX(${Math.min(0, sw.dx)}px)`; sw.el.classList.toggle('armed', sw.dx < -45); }
     }
   });
   const endSw = e => {
@@ -2253,13 +2283,17 @@ function initDeleteGestures() {
     if (swallowClick) setTimeout(() => { swallowClick = false; }, 350);
     if (!sw) return; const s = sw; sw = null;
     if (!s.active) return;
-    s.el.style.transform = ''; s.el.classList.remove('swiping', 'armed');
     swallowClick = true; setTimeout(() => { swallowClick = false; }, 400);
-    if (e.type === 'pointerup' && s.dx < -70) openDelMenu(s.kind, s.key, s.ctx);
+    const open = e.type === 'pointerup' && s.dx < -45; // swipe far enough: show 複製／垃圾桶 on the right, nothing is deleted yet
+    s.el.classList.remove('swiping', 'armed');
+    if (open) openTray(s, Math.min(0, s.dx)); else s.el.style.transform = '';
   };
   document.addEventListener('pointerup', endSw); document.addEventListener('pointercancel', endSw);
-  document.addEventListener('contextmenu', e => { if (e.target.closest('[data-del]')) e.preventDefault(); });
-  document.addEventListener('click', e => { if (swallowClick && !e.target.closest('.scrim')) { swallowClick = false; e.stopPropagation(); e.preventDefault(); } }, true);
+  document.addEventListener('contextmenu', e => {
+    const el = e.target.closest('[data-del]'); if (!el) return; e.preventDefault();
+    if (lastPT === 'mouse' && !SEL && !SORT && !e.target.closest('[data-drag]')) { cancelLp(); openDelMenu(el.dataset.del, el.dataset.key, el.dataset.ctx); } // right-click = same menu as long-press
+  });
+  document.addEventListener('click', e => { if (swallowClick && !e.target.closest('.scrim,.sw-tray')) { swallowClick = false; e.stopPropagation(); e.preventDefault(); } }, true);
 }
 
 /* ================= actions ================= */
@@ -2409,7 +2443,7 @@ async function cleanMedia() {
   try { const used = referencedMedia(S); for (const k of await Store.mediaKeys()) if (!used.has(k)) await Store.delMedia(k); } catch {}
 }
 
-const APP_VER = '3.4';
+const APP_VER = '3.5';
 /* ================= image composer (layout editor) ================= */
 const FABRIC_SRC = 'fabric.min.js'; // fabric is normally bundled into the page
 const ASPECTS = { '4:3': [1200, 900], '16:9': [1280, 720], '1:1': [1000, 1000], '3:4': [900, 1200] };
@@ -2841,9 +2875,9 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
 const MOD = isMac ? '⌘' : 'Ctrl';
 const SHORTCUTS = {
   main: [['空白鍵', '開始／暫停'], ['R', '重來'], ['↑ ／ ↓', '上一個／下一個項目'], ['1～9', '跳到第 N 個項目'], ['← ／ →', '同一群組的上一個／下一個計時器'],
-    ['E', '編輯目前的計時器'], ['N', '開關模組說明'], ['W', '開關碼表'], ['L', '碼表記錄一筆'], ['F', '全螢幕'], ['S', '進入／離開排序模式'], [MOD + ' + K 或 /', '搜尋群組、計時器模組、計時器（#標籤 可找模組）'], ['滑鼠雙擊項目', '切換到該項目並開始'], ['Esc', '關閉抽屜／返回'], ['? 或 F1', '顯示這份清單']],
+    ['E', '編輯目前的計時器模組'], ['C', '複製目前的計時器模組（可選群組）'], ['N', '開關模組說明'], ['W', '開關碼表'], ['L', '碼表記錄一筆'], ['F', '全螢幕'], ['S', '進入／離開排序模式'], [MOD + ' + K 或 /', '搜尋群組、計時器模組、計時器（#標籤 可找模組）'], ['滑鼠雙擊項目', '切換到該項目並開始'], ['Esc', '關閉抽屜／返回'], ['? 或 F1', '顯示這份清單']],
   edit: [[MOD + ' + S', '儲存'], [MOD + ' + K', '搜尋（未儲存時會先提醒）'], ['Esc', '返回（未儲存會先詢問）'], ['Alt + ↑ ／ ↓', '選上一個／下一個項目'], ['Alt + Shift + ↑ ／ ↓', '把目前項目上移／下移'],
-    ['Alt + N', '新增計時項目'], ['Alt + C', '複製目前項目'], ['Alt + Delete', '刪除目前項目'], ['Alt + T', '切換倒數計時／計時器'], ['Alt + I', '打開圖片排版'], ['Alt + M', '編輯模組說明（#標籤）'],
+    ['Alt + N', '新增計時器'], ['Alt + C', '在這個模組複製目前計時器'], ['Alt + Shift + C', '把目前計時器複製到其他模組'], ['Alt + Delete', '刪除目前計時器'], ['Alt + T', '切換倒數計時／計時器'], ['Alt + I', '打開圖片排版'], ['Alt + M', '編輯模組說明（#標籤）'],
     ['Alt + 1 ／ 2 ／ 3', '跳到標題／時間／說明'], ['↑ ／ ↓（時間、次數欄）', '加減 1，按住 Shift 加減 10'], [MOD + ' + B', '說明文字粗體'], [MOD + ' + Shift + > ／ <', '說明文字字級 +2 ／ −2'], ['F1（或不在輸入框時按 ?）', '顯示這份清單']],
   compose: [['V ／ P ／ T', '選取／畫筆／文字'], ['R ／ O ／ A ／ L', '方框／圓圈／箭頭／直線'], ['I', '加入圖片'], ['C', '裁切（Enter 套用、Esc 取消）'], ['Shift + R', '旋轉 90°'],
     ['] ／ [', '上移一層／下移一層'], ['方向鍵', '移動 1 點，Shift 一次 10 點'], [MOD + ' + C ／ V', '複製／貼上物件'], [MOD + ' + D', '原地複製'], ['Delete', '刪除選取'],
@@ -2905,6 +2939,7 @@ function initShortcuts() {
       else if (/^[1-9]$/.test(k) && t && +k <= t.items.length) selectItem(+k - 1);
       else if (k === 'ArrowLeft' || k === 'ArrowRight') { e.preventDefault(); moveTimerInGroup(k === 'ArrowRight' ? 1 : -1); }
       else if ((k === 'e' || k === 'E') && t) openEdit(S.currentTimerId);
+      else if ((k === 'c' || k === 'C') && t) copyTimers([t.id]);
       else if (k === 'w' || k === 'W') setDrawer('sw');
       else if (k === 'n' || k === 'N') setDrawer('note');
       else if ((k === 'l' || k === 'L') && (openDrawer === 'sw' || S.sw.running)) swAct('lap');
@@ -2921,7 +2956,7 @@ function initShortcuts() {
       const act = {
         ArrowUp: () => e.shiftKey ? editMoveItem(-1) : (E.sel > 0 && (stopPv(), E.sel--, renderEdit())),
         ArrowDown: () => e.shiftKey ? editMoveItem(1) : (E.sel < E.draft.items.length - 1 && (stopPv(), E.sel++, renderEdit())),
-        KeyN: () => ACT.addItem(), KeyC: () => editDupItem(),
+        KeyN: () => ACT.addItem(), KeyC: () => { const it = selItem(); if (e.shiftKey) { if (it) copyItems([it.id]); } else editDupItem(); },
         Delete: () => { const it = selItem(); if (it) confirmDelete('item', [it.id]); },
         Backspace: () => { const it = selItem(); if (it) confirmDelete('item', [it.id]); },
         KeyT: () => { const it = selItem(); if (it) ACT.setMode({ dataset: { m: it.mode === 'down' ? 'up' : 'down' } }); },
@@ -3204,6 +3239,164 @@ Object.assign(ACT, {
   tagFind: a => { closeDrawers(); openSearch('#' + a.dataset.tag); },
 });
 
+/* ================= copy modules / items + swipe tray (v3.5) ================= */
+const IC_COPY = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M16 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+const IC_TRASH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+/* ---------- chooser dialog (radio list + optional name) ---------- */
+function chooser({ title, html, ok = '複製', onOpen }) {
+  return new Promise(res => {
+    const s = document.createElement('div'); s.className = 'scrim';
+    s.innerHTML = `<div class="dialog copy-dlg" role="dialog" aria-modal="true" aria-label="${esc(title)}"><h3>${esc(title)}</h3><div class="cp-body">${html}</div>
+      <div class="btns"><button type="button" data-cd="0">取消</button><button type="button" class="primary" data-cd="1">${esc(ok)}</button></div></div>`;
+    document.body.append(s);
+    const done = yes => {
+      const c = s.querySelector('input[name=cpTo]:checked'), n = s.querySelector('#cpName');
+      const out = yes && c ? { to: c.value, name: n ? n.value.trim() : '' } : null; s.remove(); res(out);
+    };
+    s.addEventListener('click', e => { const b = e.target.closest('[data-cd]'); if (b) done(b.dataset.cd === '1'); });
+    s.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { e.stopPropagation(); done(false); }
+      else if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); done(true); }
+    });
+    if (onOpen) onOpen(s);
+    setTimeout(() => {
+      const c = s.querySelector('input[name=cpTo]:checked'); if (c) c.closest('.cp-opt').scrollIntoView({ block: 'nearest' });
+      const f = s.querySelector('#cpName') || c; if (f) { f.focus(); f.select && f.select(); }
+    }, 50);
+  });
+}
+// keep the name field in step with the target until the user types in it
+function autoName(root, base, isSame, max) {
+  const n = root.querySelector('#cpName'); if (!n) return;
+  let typed = false; n.addEventListener('input', () => { typed = true; });
+  root.addEventListener('change', e => {
+    if (!e.target.matches('input[name=cpTo]') || typed) return;
+    n.value = (isSame(e.target.value) ? base + '（複製）' : base).slice(0, max);
+  });
+}
+const listNames = arr => arr.slice(0, 5).map(x => `「${esc(x)}」`).join('、') + (arr.length > 5 ? ' 等' : '');
+
+/* ---------- copy 計時器模組 to any group ---------- */
+function cloneTimerTo(src, g, name) {
+  const t = clone(src); t.id = uid(); t.g = g.id; t.name = name;
+  t.items = t.items.map(it => Object.assign(clone(it), { id: uid() }));
+  touch(t); S.timers[t.id] = t; g.timerIds.push(t.id); touch(g);
+  return t;
+}
+async function copyTimers(ids, fromGid) {
+  ids = ids.filter(id => S.timers[id]); if (!ids.length) return;
+  const one = ids.length === 1 ? S.timers[ids[0]] : null;
+  if (!fromGid || !S.groups.some(g => g.id === fromGid)) fromGid = (S.groups.find(g => g.timerIds.includes(ids[0])) || {}).id;
+  const html = (one ? `<label class="cp-name"><span>新名稱</span><input id="cpName" maxlength="30" value="${esc((one.name + '（複製）').slice(0, 30))}" autocomplete="off"></label>`
+    : `<p class="cp-what">${ids.length} 個計時器模組：${listNames(ids.map(id => S.timers[id].name))}</p>`) +
+    `<div class="cp-h">複製到哪個群組</div><div class="cp-list" role="radiogroup" aria-label="目標群組">` +
+    S.groups.map(g => `<label class="cp-opt"><input type="radio" name="cpTo" value="${g.id}" ${g.id === fromGid ? 'checked' : ''}><span class="cp-n">${esc(g.name)}</span><small>${g.timerIds.length} 個模組${g.id === fromGid ? '・目前所在' : ''}</small></label>`).join('') +
+    `<label class="cp-opt"><input type="radio" name="cpTo" value="__new" ${S.groups.length ? '' : 'checked'}><span class="cp-n">＋ 新增群組</span></label></div>`;
+  const r = await chooser({ title: one ? `複製計時器模組「${one.name}」` : `複製 ${ids.length} 個計時器模組`, html,
+    onOpen: root => one && autoName(root, one.name, v => v === fromGid, 30) });
+  if (!r) return;
+  let g;
+  if (r.to === '__new') {
+    const n = await ask('新群組名稱', '新群組'); if (!n) return;
+    g = { id: uid(), name: n, timerIds: [], cur: 0 }; touch(g); S.groups.push(g);
+  } else g = S.groups.find(x => x.id === r.to);
+  if (!g) return;
+  const same = g.id === fromGid;
+  const made = ids.map(id => { const src = S.timers[id]; return cloneTimerTo(src, g, (one ? r.name || src.name : same ? src.name + '（複製）' : src.name).slice(0, 30)); });
+  exitSelect(); save(); renderGroups();
+  const first = made[0];
+  toast(made.length === 1 ? `已複製到「${g.name}」` : `已複製 ${made.length} 個模組到「${g.name}」`, () => {
+    if (!S.timers[first.id]) return; g.cur = Math.max(0, g.timerIds.indexOf(first.id));
+    if (page !== 'main') leaveToMain(false); selectTimer(first.id);
+  }, '前往', 6000);
+}
+
+/* ---------- copy 計時器 (items) to any module ---------- */
+async function copyItems(ids) {
+  if (!E.draft) return;
+  const items = ids.map(id => E.draft.items.find(i => i.id === id)).filter(Boolean); if (!items.length) return;
+  const one = items.length === 1 ? items[0] : null, curId = E.draft.id;
+  const opt = (val, name, sub, on) => `<label class="cp-opt"><input type="radio" name="cpTo" value="${val}" ${on ? 'checked' : ''}><span class="cp-n">${esc(name)}</span><small>${sub}</small></label>`;
+  let list = E.isNew ? opt('__draft', E.draft.name, '目前編輯中（尚未儲存）', true) : '';
+  for (const g of S.groups) {
+    const rows = g.timerIds.map(id => { const t = S.timers[id]; if (!t) return ''; return id === curId ? opt('__draft', E.draft.name, '目前編輯中', true) : opt(id, t.name, `${t.items.length} 個計時器`, false); }).join('');
+    if (rows) list += `<div class="cp-g">${esc(g.name)}</div>${rows}`;
+  }
+  const base = one ? one.title || '未命名' : '';
+  const html = (one ? `<label class="cp-name"><span>新標題</span><input id="cpName" maxlength="20" value="${esc((base + '（複製）').slice(0, 20))}" autocomplete="off"></label>`
+    : `<p class="cp-what">${items.length} 個計時器：${listNames(items.map(i => i.title || '未命名'))}</p>`) +
+    `<div class="cp-h">複製到哪個計時器模組</div><div class="cp-list" role="radiogroup" aria-label="目標計時器模組">${list}</div>`;
+  const r = await chooser({ title: one ? `複製計時器「${base}」` : `複製 ${items.length} 個計時器`, html,
+    onOpen: root => one && autoName(root, base, v => v === '__draft', 20) });
+  if (!r) return;
+  const same = r.to === '__draft';
+  const clones = items.map(it => Object.assign(clone(it), { id: uid(), title: (one ? r.name || it.title : same ? (it.title || '未命名') + '（複製）' : it.title).slice(0, 20) }));
+  exitSelect();
+  if (same) {
+    const at = Math.max(...items.map(it => E.draft.items.indexOf(it))) + 1;
+    E.draft.items.splice(at, 0, ...clones); E.sel = at; markDirty(); renderEdit();
+    toast(`已複製 ${clones.length} 個計時器，按「儲存」後生效`);
+    return;
+  }
+  const t = S.timers[r.to]; if (!t) return;
+  t.items.push(...clones); touch(t); save(); renderEditList();
+  toast(`已複製到「${t.name}」的最後面`);
+}
+function copyAsk(kind, key, ctx) { if (kind === 'timer') copyTimers([key], ctx); else if (kind === 'item') copyItems([key]); }
+
+/* ---------- swipe left → tray with 複製 / 垃圾桶 ---------- */
+let TRAY = null;
+function closeTray(instant) {
+  if (!TRAY) return; const { el, box } = TRAY; TRAY = null; box.remove();
+  if (instant) { el.style.transition = 'none'; requestAnimationFrame(() => { el.style.transition = ''; }); }
+  el.style.transform = ''; el.classList.remove('tray-open');
+}
+function openTray(s, curDx) {
+  closeTray(true);
+  const canCopy = s.kind === 'timer' || s.kind === 'item';
+  const el = s.el; el.style.transition = 'none'; el.style.transform = '';
+  const r = el.getBoundingClientRect(), right = r.right; // where the row ends when not shifted
+  el.style.transform = `translateX(${curDx}px)`; void el.offsetWidth; el.style.transition = '';
+  const W = canCopy ? 132 : 70;
+  const box = document.createElement('div'); box.className = 'sw-tray';
+  box.innerHTML = (canCopy ? `<button type="button" class="tr-copy" data-tr="copy" aria-label="複製">${IC_COPY}<span>複製</span></button>` : '') +
+    `<button type="button" class="tr-del" data-tr="del" aria-label="刪除">${IC_TRASH}<span>刪除</span></button>`;
+  Object.assign(box.style, { top: r.top + 'px', height: r.height + 'px', left: (right - W) + 'px', width: W + 'px' });
+  document.body.append(box);
+  s.el.style.transform = `translateX(${-W}px)`; s.el.classList.add('tray-open');
+  TRAY = { el: s.el, box, kind: s.kind, key: s.key, ctx: s.ctx };
+  box.addEventListener('click', e => {
+    const b = e.target.closest('[data-tr]'); if (!b || !TRAY) return; e.stopPropagation();
+    const t = TRAY; closeTray();
+    if (b.dataset.tr === 'del') trashAsk(t.kind, t.key, t.ctx); else copyAsk(t.kind, t.key, t.ctx);
+  });
+  box.querySelector('.tr-del').focus({ preventScroll: true });
+}
+async function trashAsk(kind, key, ctx) {
+  if (SEL || !canDelete(kind, key)) return;
+  const r = await dialog({ title: '確定要刪除？', body: delBody(kind, [key]),
+    buttons: [{ label: '取消', value: 0 }, { label: '多選', value: 'multi' }, { label: '刪除', value: 'del', danger: true }] });
+  if (r.value === 'del') doDelete(kind, [key], ctx);
+  else if (r.value === 'multi') enterSelect(kind, ctx, key);
+}
+function initTray() {
+  document.addEventListener('pointerdown', e => {
+    if (!TRAY || e.target.closest('.sw-tray')) return;
+    closeTray(); swallowClick = true; // a tap outside only closes the tray
+  }, true);
+  document.addEventListener('scroll', () => closeTray(true), true);
+  addEventListener('resize', () => closeTray(true));
+  document.addEventListener('keydown', e => { if (TRAY && e.key === 'Escape') { e.stopPropagation(); closeTray(); } }, true);
+}
+
+Object.assign(ACT, {
+  selCopy: () => {
+    if (!SEL) return; const order = selUniverse(), keys = order.filter(k => SEL.keys.has(k));
+    if (SEL.kind === 'timer') copyTimers(keys, SEL.ctx); else if (SEL.kind === 'item') copyItems(keys);
+  },
+});
+
 /* ================= boot ================= */
 (async () => {
   await Store.open();
@@ -3218,7 +3411,7 @@ Object.assign(ACT, {
   if (!S.timers[S.currentTimerId]) { const g = S.groups.find(g => g.timerIds.length); S.currentTimerId = g ? g.timerIds[0] : null; }
   save();
   if (!S.sw) S.sw = SWdef();
-  buildShell(); bindEvents(); initDrag(); initBackHandle(); initDeleteGestures(); initFloatTabs(); initSplitter(); bindComposer(); initFullText(); initSortDrag(); initShortcuts();
+  buildShell(); bindEvents(); initDrag(); initBackHandle(); initDeleteGestures(); initFloatTabs(); initSplitter(); bindComposer(); initFullText(); initSortDrag(); initShortcuts(); initTray();
   $('#desc').open = !isPortrait();
   showPage('main'); renderMain();
   setInterval(loop, 100);
