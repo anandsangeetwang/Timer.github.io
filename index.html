@@ -643,6 +643,16 @@ span.tag{cursor:default}
 .cp-opt input{accent-color:var(--green);width:18px;height:18px;flex:none}
 .cp-n{flex:1;min-width:0;overflow-wrap:anywhere;font-weight:700}
 .cp-opt small{color:var(--ink-soft);font-size:12px;flex:none}
+/* ===== v3.6 clipboard copy / paste ===== */
+.pcopy{position:absolute;left:-6px;top:-8px;width:28px;height:28px;border-radius:50%;background:var(--white);color:var(--green);display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,.18);border:0;cursor:pointer;padding:0}
+.pcopy svg{width:15px;height:15px}
+.paste-chip{position:absolute;left:2px;top:1px;display:inline-flex;align-items:center;gap:3px;border:0;border-radius:999px;background:var(--green);color:#fff;font:inherit;font-size:12px;font-weight:700;padding:3px 9px 3px 7px;cursor:pointer;animation:trayIn .2s ease}
+.paste-chip svg{width:13px;height:13px}
+.paste-item{color:var(--green)}
+.paste-item svg{width:20px;height:20px}
+.copy-item{color:var(--green);font-size:15px;padding:6px 4px}
+.copy-item svg{width:20px;height:20px}
+.edit-list .add-item + .add-item{padding-top:2px}
 </style></head><body>
 <div class="app" id="app"></div>
 <div class="flash" id="flash"></div>
@@ -1172,7 +1182,7 @@ function buildShell() {
 </div>
 <div class="page edit" id="pEdit" hidden>
   <div class="edit-head"><input class="name-input" id="eName" maxlength="30" aria-label="計時器名稱"><button type="button" class="note-btn" data-act="noteDlg" title="模組說明（Alt + M）"><span>模組說明</span><b id="eNoteN"></b></button><button class="sort-btn keys-btn" data-act="keys" title="快捷鍵（F1）" aria-label="快捷鍵清單">${I.keys}</button><button class="save-btn" data-act="save">儲存</button></div>
-  <div class="edit-list"><div class="edit-items" id="eItems"></div><button class="add-item" data-act="addItem">${I.plus}新增計時項目</button><p class="hint" id="eHint"></p></div>
+  <div class="edit-list"><div class="edit-items" id="eItems"></div><button class="add-item" data-act="addItem">${I.plus}新增計時項目</button><button class="add-item copy-item" data-act="clipItem" title="複製目前選取的計時器（${MOD} + C），再到任何模組按「貼上計時器」">${IC_COPY}<span>複製這個計時器</span></button><button class="add-item paste-item" id="ePaste" data-act="pasteItems" hidden>${IC_COPY}<span>貼上計時器</span></button><p class="hint" id="eHint"></p></div>
   <div class="form" id="eForm"></div>
   <div class="media"><div class="image-box" id="eImg" data-act="pickImg" role="button" tabindex="0" aria-label="選擇圖片"></div>
     <div class="desc-edit"><span class="de-label" id="eDescLbl">說明區塊</span>
@@ -1220,12 +1230,12 @@ function renderGroups() {
       body = `<div class="tlist">${g.timerIds.map(id => `<div class="trow" data-del="timer" data-key="${id}" role="checkbox" aria-checked="${SEL.keys.has(id)}" tabindex="0">${ck(SEL.keys.has(id))}<span class="tx" data-fit="2">${esc(S.timers[id].name)}</span></div>`).join('')}</div>`;
     } else {
       const pill = t
-        ? `<div class="timer-pill ${tid === S.currentTimerId ? 'current' : ''}" role="button" tabindex="0" data-act="pickTimer" data-g="${gi}" data-del="timer" data-key="${tid}" data-ctx="${g.id}"><span class="tx" data-fit="2">${esc(t.name)}</span><span class="pos num">${g.cur + 1} / ${n}</span><button class="pencil" data-act="editTimer" data-id="${tid}" aria-label="編輯 ${esc(t.name)}">${I.pencil}</button></div>`
+        ? `<div class="timer-pill ${tid === S.currentTimerId ? 'current' : ''}" role="button" tabindex="0" data-act="pickTimer" data-g="${gi}" data-del="timer" data-key="${tid}" data-ctx="${g.id}"><span class="tx" data-fit="2">${esc(t.name)}</span><span class="pos num">${g.cur + 1} / ${n}</span><button class="pcopy" data-act="clipTimer" data-id="${tid}" data-g="${g.id}" title="複製這個模組（之後到群組按「貼上」）" aria-label="複製 ${esc(t.name)}">${IC_COPY}</button><button class="pencil" data-act="editTimer" data-id="${tid}" aria-label="編輯 ${esc(t.name)}">${I.pencil}</button></div>`
         : `<div class="timer-pill" role="button" tabindex="0" data-act="addTimer" data-g="${gi}">＋ 新增計時器</div>`;
       body = `<div class="carousel"><button class="side" data-act="gprev" data-g="${gi}" aria-label="上一個計時器" ${n < 2 ? 'disabled' : ''}>${I.chevL}</button>${pill}<button class="side" data-act="gnext" data-g="${gi}" aria-label="下一個計時器" ${n < 2 ? 'disabled' : ''}>${I.chevR}</button></div>`;
     }
     const gSel = selG && SEL.keys.has(g.id);
-    return `<div class="group ${gSel ? 'picked' : ''}" data-del="group" data-key="${g.id}" ${selG ? `role="checkbox" aria-checked="${gSel}" tabindex="0"` : ''}>${selG ? ck(gSel) : ''}<div class="group-top"><button class="group-name" data-act="renameGroup" data-g="${gi}" title="點一下改名稱"><span class="tx" data-fit="2">${esc(g.name)}</span></button><button class="plus" data-act="addTimer" data-g="${gi}" aria-label="在 ${esc(g.name)} 新增計時器">${I.plus}</button></div>${body}</div>`;
+    return `<div class="group ${gSel ? 'picked' : ''}" data-del="group" data-key="${g.id}" ${selG ? `role="checkbox" aria-checked="${gSel}" tabindex="0"` : ''}>${selG ? ck(gSel) : ''}<div class="group-top"><button class="group-name" data-act="renameGroup" data-g="${gi}" title="點一下改名稱"><span class="tx" data-fit="2">${esc(g.name)}</span></button><button class="plus" data-act="addTimer" data-g="${gi}" aria-label="在 ${esc(g.name)} 新增計時器">${I.plus}</button>${pasteChip(g)}</div>${body}</div>`;
   }).join('') + (S.groups.length ? '' : '<div class="placeholder" style="color:var(--ink-soft)">還沒有群組，按下方「新增群組」開始</div>');
 }
 function renderItems() {
@@ -1564,8 +1574,8 @@ function openEdit(timerId, gi) {
 const selItem = () => E.draft.items[E.sel];
 function renderEdit() {
   $('#pEdit').classList.toggle('detail', !!E.detail);
-  $('#eName').value = E.draft.name; updNoteBtn();
-  $('#eHint').textContent = matchMedia('(pointer:coarse)').matches ? '往左滑可以複製或刪除計時器' : `按住 ${S.settings.longPress} 秒或按右鍵，可以複製、刪除或多選`;
+  $('#eName').value = E.draft.name; updNoteBtn(); updPasteBtn();
+  $('#eHint').textContent = matchMedia('(pointer:coarse)').matches ? '往左滑可以複製或刪除計時器' : `按右鍵（或按住 ${S.settings.longPress} 秒）可以複製、刪除或多選；${MOD} + C 複製、${MOD} + V 貼上`;
   renderEditList(); renderEditForm(); renderEditMedia();
 }
 function renderEditList() {
@@ -1721,7 +1731,7 @@ function generalHTML() {
   return `<h1>一般設定</h1>
   <div class="card"><h2>漸進模式</h2><p>有設定「過程」或「全域」音效時，開始後聲音慢慢變大、結束前慢慢變小。在主畫面的「音效模式」選「漸進模式」就會套用。</p>
     <div class="line"><span>開始淡入</span>${stepper('fadeIn', st.fadeIn)}</div><div class="line"><span>結束淡出</span>${stepper('fadeOut', st.fadeOut)}</div></div>
-  <div class="card"><h2>複製與刪除</h2><p>觸控螢幕：把項目往左滑，右邊會出現「複製」和垃圾桶，點垃圾桶才會詢問是否刪除；點其他地方就收回。電腦：用滑鼠按住項目不放或按右鍵，會出現「複製到…」「刪除」和「多選」。計時器模組可以複製到任何群組，計時器可以複製到任何計時器模組；群組和自己上傳的音效可以刪除。</p>
+  <div class="card"><h2>複製與刪除 <small class="muted">（目前版本 v${APP_VER}）</small></h2><p>觸控螢幕：把項目往左滑，右邊會出現「複製」和垃圾桶，點垃圾桶才會詢問是否刪除；點其他地方就收回。電腦：每個計時器模組左上角有「複製」小按鈕，按了之後每個群組會出現「貼上」，點哪個群組就貼到哪裡；也可以用 ${MOD} + C、${MOD} + V。編輯頁選好計時器按 ${MOD} + C，到任何模組的編輯頁按「貼上計時器」或 ${MOD} + V。用滑鼠按住或按右鍵，會出現「複製」「複製到…」「刪除」和「多選」。計時器模組可以複製到任何群組，計時器可以複製到任何計時器模組；群組和自己上傳的音效可以刪除。</p>
     <div class="line"><span>滑鼠按住秒數</span>${stepper('longPress', st.longPress)}</div></div>
   <div class="card"><h2>螢幕常亮</h2><p>計時進行中會盡量讓螢幕不自動關閉。裝置不支援時，按下開始會提醒你調整系統設定。</p>
     <div class="line"><span>無法保持亮螢時提醒我</span><button class="toggle" role="switch" aria-checked="${!!st.wakeRemind}" data-act="wakeRemind" aria-label="無法保持亮螢時提醒我"></button></div></div>
@@ -2131,6 +2141,7 @@ const fmtTime = ts => ts ? new Date(ts).toLocaleString('zh-TW', { month: 'numeri
 
 /* ================= delete: long-press / swipe / multi-select ================= */
 let SEL = null; // { kind, ctx, keys:Set }
+const APP_VER = '3.6';
 let swallowClick = false;
 const KIND_LABEL = { group: '群組', timer: '計時器模組', item: '計時器', sound: '音效' };
 function delName(kind, key) {
@@ -2148,10 +2159,11 @@ async function openDelMenu(kind, key, ctx) {
   const canCopy = kind === 'timer' || kind === 'item';
   if (SEL || (!canCopy && !canDelete(kind, key))) return;
   const r = await dialog({ title: `${KIND_LABEL[kind]}「${delName(kind, key)}」`, body: canCopy ? '要複製、刪除，還是選擇多個一起處理？' : '要刪除它，還是選擇多個一起刪除？',
-    buttons: [{ label: '取消', value: null }, { label: '多選', value: 'multi' }, ...(canCopy ? [{ label: '複製到…', value: 'copy' }] : []), { label: '刪除', value: 'del', danger: true }] });
+    buttons: [{ label: '取消', value: null }, { label: '多選', value: 'multi' }, ...(canCopy ? [{ label: '複製', value: 'clip' }, { label: '複製到…', value: 'copy' }] : []), { label: '刪除', value: 'del', danger: true }] });
   if (r.value === 'del') { if (canDelete(kind, key)) confirmDelete(kind, [key], ctx); }
   else if (r.value === 'multi') enterSelect(kind, ctx, key);
   else if (r.value === 'copy') copyAsk(kind, key, ctx);
+  else if (r.value === 'clip') clipAsk(kind, key, ctx);
 }
 function enterSelect(kind, ctx, key) {
   SEL = { kind, ctx, keys: new Set(key ? [key] : []) };
@@ -2253,7 +2265,7 @@ function initDeleteGestures() {
   const cancelLp = () => { if (lp) { clearTimeout(lp.t0); clearTimeout(lp.t1); lp = null; } ring.hidden = true; };
   document.addEventListener('pointerdown', e => {
     lastPT = e.pointerType;
-    if (SEL || SORT || e.target.closest('[data-drag],.pencil,.selbar,.scrim,.sw-tray')) return;
+    if (SEL || SORT || e.target.closest('[data-drag],.pencil,.pcopy,.paste-chip,.selbar,.scrim,.sw-tray')) return;
     const el = e.target.closest('[data-del]'); if (!el) return;
     const info = { el, kind: el.dataset.del, key: el.dataset.key, ctx: el.dataset.ctx, x: e.clientX, y: e.clientY };
     if (e.pointerType === 'mouse') {
@@ -2443,7 +2455,6 @@ async function cleanMedia() {
   try { const used = referencedMedia(S); for (const k of await Store.mediaKeys()) if (!used.has(k)) await Store.delMedia(k); } catch {}
 }
 
-const APP_VER = '3.5';
 /* ================= image composer (layout editor) ================= */
 const FABRIC_SRC = 'fabric.min.js'; // fabric is normally bundled into the page
 const ASPECTS = { '4:3': [1200, 900], '16:9': [1280, 720], '1:1': [1000, 1000], '3:4': [900, 1200] };
@@ -2875,9 +2886,9 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
 const MOD = isMac ? '⌘' : 'Ctrl';
 const SHORTCUTS = {
   main: [['空白鍵', '開始／暫停'], ['R', '重來'], ['↑ ／ ↓', '上一個／下一個項目'], ['1～9', '跳到第 N 個項目'], ['← ／ →', '同一群組的上一個／下一個計時器'],
-    ['E', '編輯目前的計時器模組'], ['C', '複製目前的計時器模組（可選群組）'], ['N', '開關模組說明'], ['W', '開關碼表'], ['L', '碼表記錄一筆'], ['F', '全螢幕'], ['S', '進入／離開排序模式'], [MOD + ' + K 或 /', '搜尋群組、計時器模組、計時器（#標籤 可找模組）'], ['滑鼠雙擊項目', '切換到該項目並開始'], ['Esc', '關閉抽屜／返回'], ['? 或 F1', '顯示這份清單']],
+    ['E', '編輯目前的計時器模組'], [MOD + ' + C ／ ' + MOD + ' + V', '複製目前的計時器模組／貼到目前所在的群組（也可以點群組上的「貼上」）'], ['C', '複製目前的模組到指定群組（會問要放哪裡）'], ['N', '開關模組說明'], ['W', '開關碼表'], ['L', '碼表記錄一筆'], ['F', '全螢幕'], ['S', '進入／離開排序模式'], [MOD + ' + K 或 /', '搜尋群組、計時器模組、計時器（#標籤 可找模組）'], ['滑鼠雙擊項目', '切換到該項目並開始'], ['Esc', '關閉抽屜／返回'], ['? 或 F1', '顯示這份清單']],
   edit: [[MOD + ' + S', '儲存'], [MOD + ' + K', '搜尋（未儲存時會先提醒）'], ['Esc', '返回（未儲存會先詢問）'], ['Alt + ↑ ／ ↓', '選上一個／下一個項目'], ['Alt + Shift + ↑ ／ ↓', '把目前項目上移／下移'],
-    ['Alt + N', '新增計時器'], ['Alt + C', '在這個模組複製目前計時器'], ['Alt + Shift + C', '把目前計時器複製到其他模組'], ['Alt + Delete', '刪除目前計時器'], ['Alt + T', '切換倒數計時／計時器'], ['Alt + I', '打開圖片排版'], ['Alt + M', '編輯模組說明（#標籤）'],
+    ['Alt + N', '新增計時器'], ['Alt + C', '在這個模組複製目前計時器'], [MOD + ' + C ／ ' + MOD + ' + V', '複製目前的計時器／貼在目前選取的計時器後面（可以到別的模組再貼上）'], ['Alt + Shift + C', '把目前計時器複製到指定的模組'], ['Alt + Delete', '刪除目前計時器'], ['Alt + T', '切換倒數計時／計時器'], ['Alt + I', '打開圖片排版'], ['Alt + M', '編輯模組說明（#標籤）'],
     ['Alt + 1 ／ 2 ／ 3', '跳到標題／時間／說明'], ['↑ ／ ↓（時間、次數欄）', '加減 1，按住 Shift 加減 10'], [MOD + ' + B', '說明文字粗體'], [MOD + ' + Shift + > ／ <', '說明文字字級 +2 ／ −2'], ['F1（或不在輸入框時按 ?）', '顯示這份清單']],
   compose: [['V ／ P ／ T', '選取／畫筆／文字'], ['R ／ O ／ A ／ L', '方框／圓圈／箭頭／直線'], ['I', '加入圖片'], ['C', '裁切（Enter 套用、Esc 取消）'], ['Shift + R', '旋轉 90°'],
     ['] ／ [', '上移一層／下移一層'], ['方向鍵', '移動 1 點，Shift 一次 10 點'], [MOD + ' + C ／ V', '複製／貼上物件'], [MOD + ' + D', '原地複製'], ['Delete', '刪除選取'],
@@ -2887,7 +2898,7 @@ const SHORTCUTS = {
 function showShortcuts() {
   const list = SHORTCUTS[page] || SHORTCUTS.main;
   const title = { main: '計時畫面', edit: '編輯計時器', compose: '圖片排版', settings: '設定' }[page] || '';
-  dialog({ title: `快捷鍵：${title}`, body: `<table class="keys">${list.map(([k, v]) => `<tr><th><kbd>${esc(k)}</kbd></th><td>${esc(v)}</td></tr>`).join('')}</table><p class="hint">在輸入框打字時，只有 ${MOD}／Alt 組合鍵有作用。中文輸入法開著時，單一字母的快捷鍵可能被輸入法接走，請先切到英數模式；F1 隨時都能叫出這份清單。</p>`, buttons: [{ label: '知道了', value: 1, primary: true }] });
+  dialog({ title: `快捷鍵：${title}`, body: `<table class="keys">${list.map(([k, v]) => `<tr><th><kbd>${esc(k)}</kbd></th><td>${esc(v)}</td></tr>`).join('')}</table><p class="hint">目前版本 v${APP_VER}。在輸入框打字時，只有 ${MOD}／Alt 組合鍵有作用。中文輸入法開著時，單一字母的快捷鍵可能被輸入法接走，請先切到英數模式；F1 隨時都能叫出這份清單。</p>`, buttons: [{ label: '知道了', value: 1, primary: true }] });
 }
 function moveTimerInGroup(dir) {
   const g = S.groups.find(x => x.timerIds.includes(S.currentTimerId)); if (!g || g.timerIds.length < 2) return;
@@ -2926,6 +2937,7 @@ function initShortcuts() {
     if (e.defaultPrevented || e.isComposing || e.keyCode === 229) return; // typing Chinese with an IME
     if ((isMac ? e.metaKey : e.ctrlKey) && e.code === 'KeyK' && !document.querySelector('.scrim:not(.search-scrim)')) { e.preventDefault(); openSearch(); return; }
     if (document.querySelector('.scrim')) return;
+    if (clipKeys(e)) return;
     const el = e.target, typing = /INPUT|TEXTAREA|SELECT/.test(el.tagName) || el.isContentEditable;
     const mod = isMac ? e.metaKey : e.ctrlKey, k = e.key, code = e.code;
     if (k === 'F1' || (!typing && (k === '?' || k === '？'))) { e.preventDefault(); showShortcuts(); return; }
@@ -3343,6 +3355,7 @@ async function copyItems(ids) {
   t.items.push(...clones); touch(t); save(); renderEditList();
   toast(`已複製到「${t.name}」的最後面`);
 }
+function clipAsk(kind, key, ctx) { if (kind === 'timer') clipTimers([key], ctx); else if (kind === 'item') clipItems([key]); }
 function copyAsk(kind, key, ctx) { if (kind === 'timer') copyTimers([key], ctx); else if (kind === 'item') copyItems([key]); }
 
 /* ---------- swipe left → tray with 複製 / 垃圾桶 ---------- */
@@ -3395,6 +3408,71 @@ Object.assign(ACT, {
     if (!SEL) return; const order = selUniverse(), keys = order.filter(k => SEL.keys.has(k));
     if (SEL.kind === 'timer') copyTimers(keys, SEL.ctx); else if (SEL.kind === 'item') copyItems(keys);
   },
+});
+
+/* ---------- clipboard: 複製 → 貼上 (v3.6) ---------- */
+let CLIP = null; // { kind:'timer', list:[timer snapshot], from: groupId } | { kind:'item', list:[item snapshot], from: timerId }
+function clipTimers(ids, fromGid) {
+  const list = ids.map(id => S.timers[id]).filter(Boolean).map(clone); if (!list.length) return;
+  if (!fromGid) fromGid = (S.groups.find(g => g.timerIds.includes(list[0].id)) || {}).id;
+  CLIP = { kind: 'timer', list, from: fromGid };
+  exitSelect(); renderGroups();
+  toast(list.length === 1 ? `已複製「${list[0].name}」，到要放的群組按「貼上」（或 ${MOD} + V）` : `已複製 ${list.length} 個模組，到要放的群組按「貼上」`, null, '', 5000);
+}
+function pasteTimers(gid) {
+  if (!CLIP || CLIP.kind !== 'timer') { toast('還沒有複製計時器模組'); return; }
+  const g = S.groups.find(x => x.id === gid); if (!g) return;
+  const same = g.id === CLIP.from;
+  const made = CLIP.list.map(src => cloneTimerTo(src, g, (same ? src.name + '（複製）' : src.name).slice(0, 30)));
+  g.cur = g.timerIds.indexOf(made[0].id); save(); renderGroups();
+  const first = made[0];
+  toast(made.length === 1 ? `已貼上到「${g.name}」` : `已貼上 ${made.length} 個到「${g.name}」`, () => { if (S.timers[first.id]) { g.cur = g.timerIds.indexOf(first.id); selectTimer(first.id); } }, '前往', 6000);
+}
+function clipItems(ids) {
+  if (!E.draft) return;
+  const list = ids.map(id => E.draft.items.find(i => i.id === id)).filter(Boolean).map(clone); if (!list.length) return;
+  CLIP = { kind: 'item', list, from: E.draft.id };
+  exitSelect(); updPasteBtn();
+  toast(list.length === 1 ? `已複製「${list[0].title || '未命名'}」，到任何模組的編輯頁按「貼上」（或 ${MOD} + V）` : `已複製 ${list.length} 個計時器，到任何模組的編輯頁按「貼上」`, null, '', 5000);
+}
+function pasteItems() {
+  if (!E.draft) return;
+  if (!CLIP || CLIP.kind !== 'item') { toast('還沒有複製計時器'); return; }
+  const same = CLIP.from === E.draft.id;
+  const clones = CLIP.list.map(it => Object.assign(clone(it), { id: uid(), title: (same ? (it.title || '未命名') + '（複製）' : it.title).slice(0, 20) }));
+  const at = E.draft.items.length ? E.sel + 1 : 0;
+  E.draft.items.splice(at, 0, ...clones); E.sel = at; markDirty(); renderEdit();
+  const l = $('#eItems .erow.sel'); if (l) l.scrollIntoView({ block: 'nearest' });
+  toast(`已貼上 ${clones.length} 個計時器，按「儲存」後生效`);
+}
+function updPasteBtn() {
+  const b = $('#ePaste'); if (!b) return;
+  const n = CLIP && CLIP.kind === 'item' ? CLIP.list.length : 0;
+  b.hidden = !n; b.querySelector('span').textContent = n > 1 ? `貼上 ${n} 個計時器` : '貼上計時器';
+}
+const pasteChip = g => CLIP && CLIP.kind === 'timer' && !SORT && !SEL ? `<button type="button" class="paste-chip" data-act="pasteHere" data-gid="${g.id}" title="把複製的模組貼到「${esc(g.name)}」">${IC_COPY}貼上</button>` : '';
+// Ctrl/⌘+C, Ctrl/⌘+V outside text fields
+function clipKeys(e) {
+  const mod = isMac ? e.metaKey : e.ctrlKey; if (!mod || e.altKey || e.shiftKey) return false;
+  const el = e.target, typing = /INPUT|TEXTAREA|SELECT/.test(el.tagName) || el.isContentEditable;
+  const sel = window.getSelection && String(window.getSelection() || '');
+  if (typing || (e.code === 'KeyC' && sel)) return false; // normal text copy/paste
+  if (e.code === 'KeyC') {
+    if (page === 'main') { if (SEL && SEL.kind === 'timer') clipTimers(selUniverse().filter(k => SEL.keys.has(k)), SEL.ctx); else if (S.currentTimerId) clipTimers([S.currentTimerId]); else return false; }
+    else if (page === 'edit') { if (SEL && SEL.kind === 'item') clipItems(selUniverse().filter(k => SEL.keys.has(k))); else { const it = selItem(); if (!it) return false; clipItems([it.id]); } }
+    else return false;
+  } else if (e.code === 'KeyV') {
+    if (page === 'main') { const g = S.groups.find(x => x.timerIds.includes(S.currentTimerId)) || S.groups[0]; if (!g) return false; pasteTimers(g.id); }
+    else if (page === 'edit') pasteItems();
+    else return false;
+  } else return false;
+  e.preventDefault(); return true;
+}
+Object.assign(ACT, {
+  pasteHere: a => pasteTimers(a.dataset.gid),
+  pasteItems: () => pasteItems(),
+  clipItem: () => { const it = selItem(); if (it) clipItems([it.id]); },
+  clipTimer: a => clipTimers([a.dataset.id], a.dataset.g),
 });
 
 /* ================= boot ================= */
