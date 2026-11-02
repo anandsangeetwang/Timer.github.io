@@ -698,6 +698,44 @@ span.tag{cursor:default}
   .edit.detail .desc-edit{min-height:auto}
   .edit.detail .rt{min-height:180px;max-height:none}
 }
+/* ================= v3.8 per-item layout (上下／左右) + phone block order ================= */
+.stage{grid-template-areas:"head" "image" "split" "desc"}
+.stage-head{grid-area:head}.stage .image-wrap{grid-area:image}.stage .splitter{grid-area:split}.stage .desc{grid-area:desc}
+.splitter{position:relative}
+.stage.side .splitter{cursor:col-resize;min-height:0}
+.stage.side .splitter > span:first-child{width:6px;height:64px}
+.sp-btns{position:absolute;left:calc(50% + 44px);top:50%;transform:translateY(-50%);display:flex;gap:6px;z-index:3;opacity:.55;transition:opacity .15s}
+.splitter:hover .sp-btns,.sp-btns:focus-within{opacity:1}
+.stage.side .sp-btns{left:50%;top:calc(50% + 44px);transform:translateX(-50%);flex-direction:column}
+.sp-b{width:24px;height:24px;border-radius:50%;background:var(--white);color:var(--ink-soft);font-size:13px;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.2);display:grid;place-items:center}
+.sp-b[hidden]{display:none}
+.lay-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:13px;background:var(--panel-2);border-radius:14px;padding:6px 10px}
+.lay-l{font-weight:700;color:var(--ink-soft)}
+.seg{display:inline-flex;background:var(--white);border-radius:10px;padding:2px;gap:2px}
+.seg button{padding:4px 12px;border-radius:8px;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--pink);font-weight:700}
+.lay-p{display:flex;align-items:center;gap:6px}
+.lay-p input{width:120px;accent-color:var(--pink-deep)}
+.lay-p b{min-width:3em}
+.lay-row .chip{font-size:12px}
+.media{grid-template-rows:auto minmax(0,1fr) minmax(210px,46%)}
+.scrim.sheet{background:rgba(20,26,34,.18);align-items:end}
+.ord-dlg{width:min(380px,100%)}
+.ord-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ord-list li{display:flex;align-items:center;gap:6px;background:var(--panel-2);border-radius:12px;padding:6px 8px 6px 12px;font-size:16px}
+.ord-list li span{flex:1}
+.ord-list button{width:40px;height:34px;border-radius:10px;background:var(--white);color:var(--ink-soft);font-size:14px}
+.ord-list button:disabled{opacity:.3}
+@media (max-width:700px){
+  .main{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+  .main > .items,.main > .controls,.main .stage > *{min-height:auto!important}
+  .main .desc{margin-bottom:0}
+  .items{align-items:center}
+  .controls{padding:4px 16px}
+  .sp-btns{display:none}
+  .edit.detail .media{grid-template-rows:auto 240px auto}
+  .lay-p input{width:100px}
+}
 </style></head><body>
 <div class="app" id="app"></div>
 <div class="flash" id="flash"></div>
@@ -1180,7 +1218,7 @@ let openDrawer = null;
 function buildShell() {
   $('#app').innerHTML = `
 <div class="page main" id="pMain">
-  <div class="topbar"><button class="icon-btn" data-act="menu" aria-label="開啟群組清單">${I.menu}</button><div class="tname" id="tName"></div><button class="icon-btn keys-t" data-act="search" aria-label="搜尋">${I.search}</button><button class="icon-btn keys-t" data-act="keys" aria-label="快捷鍵清單">${I.keys}</button><button class="icon-btn gear-t" data-act="settings" aria-label="設定">${I.gear}</button></div>
+  <div class="topbar"><button class="icon-btn" data-act="menu" aria-label="開啟群組清單">${I.menu}</button><div class="tname" id="tName"></div><button class="icon-btn keys-t" data-act="arrange" aria-label="調整區塊順序">${LI.order}</button><button class="icon-btn keys-t" data-act="search" aria-label="搜尋">${I.search}</button><button class="icon-btn keys-t" data-act="keys" aria-label="快捷鍵清單">${I.keys}</button><button class="icon-btn gear-t" data-act="settings" aria-label="設定">${I.gear}</button></div>
   <aside class="groups" id="groups" aria-label="群組與計時器">
     <div class="groups-head"><button class="gear" data-act="settings" aria-label="設定">${I.gear}</button><button class="tri up" data-act="gup" aria-label="群組往上捲">${I.flower}</button><button class="sort-btn" data-act="sortMode" title="排序群組與計時器（S）" aria-label="排序群組與計時器">${I.sort}</button><button class="sort-btn keys-btn" data-act="keys" title="快捷鍵（F1）" aria-label="快捷鍵清單">${I.keys}</button></div>
     <button class="search-pill" data-act="search" title="搜尋（${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} + K）">${I.search}<span>搜尋群組、計時器</span></button>
@@ -1199,7 +1237,7 @@ function buildShell() {
     <div class="stage-head"><div class="title-pill" id="title"></div>
       <div class="timebox" id="timebox"><button class="time-pill num" id="time" data-act="toggle" aria-label="開始或暫停"></button><div class="count-pill num" id="count"></div></div></div>
     <div class="image-wrap" id="imgWrap"><div class="image-box" id="imgBox"></div></div>
-    <div class="splitter" id="split" role="separator" aria-orientation="horizontal" aria-label="拖曳調整圖片與說明的大小" tabindex="0"><span></span></div>
+    <div class="splitter" id="split" role="separator" aria-orientation="horizontal" aria-label="拖曳調整圖片與說明的大小（只影響這次）" tabindex="0"><span></span><div class="sp-btns"><button type="button" class="sp-b" id="splitFlip" data-act="layFlip">⇆</button><button type="button" class="sp-b" id="splitRst" data-act="layReset" title="回到編輯時設定的比例" hidden>↺</button></div></div>
     <div class="desc" id="desc" role="region" aria-labelledby="descH"><div class="desc-h" id="descH">說明<span class="desc-nav" id="descNav" hidden><button type="button" data-act="descPrev" aria-label="上一欄">◀</button><span class="num" id="descPg"></span><button type="button" data-act="descNext" aria-label="下一欄">▶</button></span></div><div class="desc-body rich" id="descText"></div></div>
   </section>
   <div class="controls"><button class="ctl" data-act="reset" aria-label="重來">${I.reset}</button><button class="ctl play" id="playBtn" data-act="toggle" aria-label="開始"></button></div>
@@ -1229,7 +1267,7 @@ function buildShell() {
   <div class="edit-head"><input class="name-input" id="eName" maxlength="30" aria-label="計時器名稱"><button type="button" class="note-btn" data-act="noteDlg" title="模組說明（Alt + M）"><span>模組說明</span><b id="eNoteN"></b></button><button class="sort-btn keys-btn" data-act="keys" title="快捷鍵（F1）" aria-label="快捷鍵清單">${I.keys}</button><button class="save-btn" data-act="save">儲存</button></div>
   <div class="edit-list"><div class="edit-items" id="eItems"></div><button class="add-item" data-act="addItem">${I.plus}新增計時項目</button><button class="add-item copy-item" data-act="clipItem" title="複製目前選取的計時器（${MOD} + C），再到任何模組按「貼上計時器」">${IC_COPY}<span>複製這個計時器</span></button><button class="add-item paste-item" id="ePaste" data-act="pasteItems" hidden>${IC_COPY}<span>貼上計時器</span></button><p class="hint" id="eHint"></p></div>
   <div class="form" id="eForm"></div>
-  <div class="media"><div class="image-box" id="eImg" data-act="pickImg" role="button" tabindex="0" aria-label="選擇圖片"></div>
+  <div class="media"><div class="lay-row" id="eLay"></div><div class="image-box" id="eImg" data-act="pickImg" role="button" tabindex="0" aria-label="選擇圖片"></div>
     <div class="desc-edit"><span class="de-label" id="eDescLbl">說明區塊</span>
       <div class="rt-bar" role="toolbar" aria-label="選取文字後設定格式">
         <label class="rt-size">字級<input type="number" id="rtSize" min="8" max="96" step="1" value="16" inputmode="numeric" list="rtSizes" aria-label="字體大小（像素）"><datalist id="rtSizes"><option value="12"><option value="14"><option value="16"><option value="18"><option value="20"><option value="24"><option value="28"><option value="32"><option value="40"><option value="48"></datalist><button type="button" class="rt-b" data-act="rtSizeDn" aria-label="字級減 2">−</button><button type="button" class="rt-b" data-act="rtSizeUp" aria-label="字級加 2">＋</button></label>
@@ -1311,7 +1349,7 @@ function renderStage() {
   box.dataset.img = want || '';
   if (want) mediaURL(want).then(u => { if (box.dataset.img === want) box.innerHTML = u ? `<img src="${u}" alt="${esc(it.title)}">` : ph(); });
   else box.innerHTML = ph(t ? '點左側計時器的鉛筆，可以為這個項目加入圖片' : '按左側「＋」新增計時器');
-  updateLive(); renderDrawers();
+  updateLive(); renderDrawers(); applySplit();
 }
 const ph = (msg = '找不到圖片') => `<div class="placeholder">${I.pose}<span>${esc(msg)}</span></div>`;
 function renderControls() {
@@ -1444,37 +1482,69 @@ async function swCopy() {
   try { await navigator.clipboard.writeText(text); toast('已複製紀錄'); } catch { toast('無法複製，請手動選取'); }
 }
 
-/* ---------- image / description splitter ---------- */
+/* ---------- image / description layout (per timer item) ---------- */
+// it.lay = { m: 'v' (上下) | 'h' (左右), p: image share 0.2–0.8 } is the default set in the edit page.
+// Dragging on the main screen only changes LAY (memory); switching module, saving or reopening the app goes back to the default.
+const LAY = {}, LAY_MIN = .2, LAY_MAX = .8;
+function itemLay(it) { const d = it && it.lay; return { m: d && d.m === 'h' ? 'h' : 'v', p: clamp(d && isFinite(d.p) ? d.p : (S.settings.split || .68), LAY_MIN, LAY_MAX) }; }
+function curLay() {
+  const t = curTimer(), it = t && t.items[R.idx];
+  if (!it) return Object.assign(itemLay(null), { id: null, dflt: true });
+  return Object.assign(itemLay(it), LAY[it.id] || {}, { id: it.id, dflt: !LAY[it.id] });
+}
+function resetTempLayout() { for (const k of Object.keys(LAY)) delete LAY[k]; PORD = null; }
 function applySplit() {
-  const stage = document.querySelector('.stage'), iw = $('#imgWrap'); if (!stage) return;
+  const stage = document.querySelector('.stage'), iw = $('#imgWrap'), sp = $('#split'); if (!stage) return;
+  applyOrder();
   if (isPortrait()) {
-    stage.style.gridTemplateRows = '';
+    stage.classList.remove('side'); stage.style.gridTemplateRows = stage.style.gridTemplateColumns = stage.style.gridTemplateAreas = '';
     iw.style.height = Math.round(clamp(S.settings.splitP || .38, .18, .75) * innerHeight) + 'px';
   } else {
     iw.style.height = '';
-    const p = clamp(S.settings.split || .68, .2, .88);
-    stage.style.gridTemplateRows = `auto minmax(0,${p}fr) 14px minmax(52px,${(1 - p).toFixed(3)}fr)`;
+    const L = curLay(), p = L.p, q = (1 - p).toFixed(3);
+    stage.classList.toggle('side', L.m === 'h');
+    if (L.m === 'h') {
+      stage.style.gridTemplateAreas = '"head head head" "image split desc"';
+      stage.style.gridTemplateColumns = `minmax(0,${p}fr) 14px minmax(0,${q}fr)`;
+      stage.style.gridTemplateRows = 'auto minmax(0,1fr)';
+    } else {
+      stage.style.gridTemplateAreas = '"head" "image" "split" "desc"';
+      stage.style.gridTemplateColumns = 'minmax(0,1fr)';
+      stage.style.gridTemplateRows = `auto minmax(0,${p}fr) 14px minmax(52px,${q}fr)`;
+    }
+    sp.setAttribute('aria-orientation', L.m === 'h' ? 'vertical' : 'horizontal');
+    const flip = $('#splitFlip'), rst = $('#splitRst');
+    if (flip) { flip.textContent = L.m === 'h' ? '⇅' : '⇆'; flip.title = L.m === 'h' ? '這次改成上下排列' : '這次改成左右排列'; }
+    if (rst) rst.hidden = L.dflt;
   }
+  if (typeof descMoreUpd === 'function') requestAnimationFrame(descMoreUpd);
 }
 function initSplitter() {
   const sp = $('#split'); let st = null;
   sp.addEventListener('pointerdown', e => {
+    if (e.target.closest('button')) return;
     const iw = $('#imgWrap').getBoundingClientRect(), de = $('#desc').getBoundingClientRect();
-    st = { top: iw.top, bottom: de.bottom, h0: iw.height, y0: e.clientY };
+    st = { left: iw.left, top: iw.top, right: de.right, bottom: de.bottom, h0: iw.height, y0: e.clientY };
     sp.setPointerCapture(e.pointerId); sp.classList.add('dragging'); e.preventDefault();
   });
   sp.addEventListener('pointermove', e => {
     if (!st) return;
-    if (isPortrait()) S.settings.splitP = clamp((st.h0 + e.clientY - st.y0) / innerHeight, .18, .75);
-    else S.settings.split = clamp((e.clientY - st.top) / Math.max(1, st.bottom - st.top), .2, .88);
-    applySplit();
+    if (isPortrait()) { S.settings.splitP = clamp((st.h0 + e.clientY - st.y0) / innerHeight, .18, .75); applySplit(); return; }
+    const L = curLay(); if (!L.id) return;
+    const p = L.m === 'h' ? (e.clientX - st.left) / Math.max(1, st.right - st.left) : (e.clientY - st.top) / Math.max(1, st.bottom - st.top);
+    LAY[L.id] = { m: L.m, p: clamp(p, LAY_MIN, LAY_MAX) }; applySplit();
   });
-  const end = () => { if (!st) return; st = null; sp.classList.remove('dragging'); save(); };
+  const end = () => { if (!st) return; st = null; sp.classList.remove('dragging'); if (isPortrait()) save(); };
   sp.addEventListener('pointerup', end); sp.addEventListener('pointercancel', end);
   sp.addEventListener('keydown', e => {
-    const d = e.key === 'ArrowUp' ? -.04 : e.key === 'ArrowDown' ? .04 : 0; if (!d) return; e.preventDefault();
-    if (isPortrait()) S.settings.splitP = clamp((S.settings.splitP || .38) + d, .18, .75); else S.settings.split = clamp((S.settings.split || .68) + d, .2, .88);
-    applySplit(); save();
+    if (isPortrait()) {
+      const d = e.key === 'ArrowUp' ? -.04 : e.key === 'ArrowDown' ? .04 : 0; if (!d) return; e.preventDefault();
+      S.settings.splitP = clamp((S.settings.splitP || .38) + d, .18, .75); applySplit(); save(); return;
+    }
+    const L = curLay(); if (!L.id) return;
+    const keys = L.m === 'h' ? { ArrowLeft: -.04, ArrowRight: .04 } : { ArrowUp: -.04, ArrowDown: .04 };
+    const d = keys[e.key]; if (!d) return; e.preventDefault();
+    LAY[L.id] = { m: L.m, p: clamp(L.p + d, LAY_MIN, LAY_MAX) }; applySplit();
   });
   addEventListener('resize', applySplit);
 }
@@ -1484,7 +1554,7 @@ function setRatio(r) {
   const t = curTimer(); if (!t || !isFinite(r)) return;
   t.ratio = clamp(Math.round(r * 100) / 100, .1, 9.99); touch(t); save(); renderDrawers(); updateLive();
 }
-function selectTimer(id) { S.currentTimerId = id; resetRun(); save(); renderMain(); }
+function selectTimer(id) { S.currentTimerId = id; resetTempLayout(); resetRun(); save(); renderMain(); }
 function scrollList(el, dir) {
   if (isPortrait() && el.id === 'itemList') el.scrollBy({ left: dir * el.clientWidth * .7, behavior: 'smooth' });
   else el.scrollBy({ top: dir * el.clientHeight * .6, behavior: 'smooth' });
@@ -1675,6 +1745,7 @@ function renderEditForm() {
   <div class="line"><span>不使用全域</span><button type="button" class="toggle" role="switch" aria-checked="${!!it.noGlobal}" data-act="noGlobal" aria-label="不使用全域"></button></div>`;
 }
 function renderEditMedia() {
+  renderLayRow();
   const it = selItem(); const box = $('#eImg');
   $('#eDesc').innerHTML = it ? (it.descHtml ? cleanHTML(it.descHtml) : esc(it.desc || '').replace(/\n/g, '<br>')) : ''; richEditPrep($('#eDesc'));
   const want = it && it.imageId; box.dataset.img = want || '';
@@ -1711,7 +1782,7 @@ function commitEdit() {
   touch(d); S.timers[d.id] = clone(d);
   if (E.isNew) { S.currentTimerId = d.id; resetRun(); E.isNew = false; }
   if (d.id === S.currentTimerId) { if (R.idx >= d.items.length) resetRun(); }
-  E.dirty = false; save(); toast('已儲存'); return true;
+  E.dirty = false; resetTempLayout(); save(); toast('已儲存'); return true;
 }
 function initDrag() {
   let dr = null;
@@ -2201,7 +2272,7 @@ const fmtTime = ts => ts ? new Date(ts).toLocaleString('zh-TW', { month: 'numeri
 
 /* ================= delete: long-press / swipe / multi-select ================= */
 let SEL = null; // { kind, ctx, keys:Set }
-const APP_VER = '3.7';
+const APP_VER = '3.8';
 let swallowClick = false;
 const KIND_LABEL = { group: '群組', timer: '計時器模組', item: '計時器', sound: '音效' };
 function delName(kind, key) {
@@ -2460,7 +2531,7 @@ function bindEvents() {
     if (e.key === 'Escape') { if (SEL) exitSelect(); else if (SORT) exitSort(); else if (openDrawer) closeDrawers(); else if (page !== 'main') goBack(); else closeMenu(); }
   });
   document.addEventListener('pointerdown', e => { if (openDrawer && !e.target.closest('.ftab,.fpanel,.scrim,.toast')) closeDrawers(); }, true);
-  initRichView(); initRichEdit();
+  initRichView(); initRichEdit(); initLayout();
   const ri = $('#ratioInput');
   ri.addEventListener('focus', () => { const t = curTimer(); ri.value = (t ? t.ratio || 1 : 1).toFixed(2); ri.select(); });
   ri.addEventListener('change', () => setRatio(parseFloat(ri.value)));
@@ -3716,6 +3787,103 @@ Object.assign(ACT, {
   rtLink: () => rtLink(), rtHr: () => rtHr(), rtTable: () => rtTable(), rtFold: () => rtFold(),
   tblRow: () => tblAct('row'), tblCol: () => tblAct('col'), tblDelRow: () => tblAct('delRow'), tblDelCol: () => tblAct('delCol'), tblDel: () => tblAct('del'),
   descPrev: () => descStep(-1), descNext: () => descStep(1),
+});
+
+/* ================= per-item image/description layout + phone block order (v3.8) ================= */
+const LI = {
+  order: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="5" rx="1.6" fill="none" stroke="currentColor" stroke-width="2"/><rect x="4" y="10" width="16" height="5" rx="1.6" fill="currentColor" opacity=".35"/><rect x="4" y="17" width="16" height="4" rx="1.6" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
+};
+const BLOCKS = { head: '標題與時間', image: '圖片', items: '計時器清單', controls: '播放鍵', desc: '說明' };
+const DEF_ORDER = ['head', 'image', 'items', 'controls', 'desc'];
+let PORD = null; // phone order changed on the main screen (memory only, this use)
+function normOrder(o) {
+  const out = (Array.isArray(o) ? o : []).filter((k, i, a) => DEF_ORDER.includes(k) && a.indexOf(k) === i);
+  for (const k of DEF_ORDER) if (!out.includes(k)) out.push(k);
+  return out;
+}
+const sameOrder = (a, b) => normOrder(a).join() === normOrder(b).join();
+function curOrder() { const t = curTimer(); return normOrder(PORD || (t && t.porder)); }
+function applyOrder() {
+  const m = $('#pMain'); if (!m) return;
+  if (!isPortrait()) { m.style.gridTemplateAreas = ''; m.style.gridTemplateRows = ''; return; }
+  const areas = ['top'];
+  for (const k of curOrder()) { areas.push(k); if (k === 'image') areas.push('split'); }
+  m.style.gridTemplateAreas = areas.map(a => `"${a}"`).join(' ') + ' "."';
+  m.style.gridTemplateRows = `repeat(${areas.length}, auto) 1fr`;
+}
+
+/* order editor: used by the edit page (default) and the main screen (this time only) */
+function orderDialog({ title, order, def, defLabel, live, hint }) {
+  return new Promise(res => {
+    let cur = normOrder(order);
+    const s = document.createElement('div'); s.className = 'scrim sheet';
+    const draw = () => {
+      s.querySelector('.ord-list').innerHTML = cur.map((k, i) => `<li><span>${i + 1}. ${BLOCKS[k]}</span>
+        <button type="button" data-mv="-1" data-i="${i}" aria-label="${BLOCKS[k]} 往上" ${i ? '' : 'disabled'}>▲</button><button type="button" data-mv="1" data-i="${i}" aria-label="${BLOCKS[k]} 往下" ${i < cur.length - 1 ? '' : 'disabled'}>▼</button></li>`).join('');
+      s.querySelector('[data-o=def]').disabled = sameOrder(cur, def);
+      live && live(cur);
+    };
+    s.innerHTML = `<div class="dialog ord-dlg" role="dialog" aria-modal="true" aria-label="${esc(title)}"><h3>${esc(title)}</h3>${hint ? `<p class="hint">${hint}</p>` : ''}<ol class="ord-list"></ol>
+      <div class="btns"><button type="button" data-o="def">${esc(defLabel)}</button><button type="button" data-o="cancel">取消</button><button type="button" class="primary" data-o="ok">完成</button></div></div>`;
+    document.body.append(s);
+    const before = cur.slice();
+    const close = v => { s.remove(); res(v); };
+    s.addEventListener('click', e => {
+      const mv = e.target.closest('[data-mv]');
+      if (mv) { const i = +mv.dataset.i, j = i + +mv.dataset.mv; [cur[i], cur[j]] = [cur[j], cur[i]]; draw(); const b = s.querySelector(`[data-i="${j}"][data-mv="${mv.dataset.mv}"]`) || s.querySelector(`[data-i="${j}"]`); b && b.focus(); return; }
+      const o = e.target.closest('[data-o]'); if (!o) return;
+      if (o.dataset.o === 'def') { cur = normOrder(def); draw(); return; }
+      if (o.dataset.o === 'cancel') { live && live(before); close(null); return; }
+      close(cur);
+    });
+    s.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); live && live(before); close(null); } });
+    draw(); setTimeout(() => { const b = s.querySelector('.primary'); b && b.focus(); }, 60);
+  });
+}
+
+/* ---------- edit page: layout row ---------- */
+function renderLayRow() {
+  const box = $('#eLay'), it = E.draft && selItem(); if (!box) return;
+  if (!it) { box.innerHTML = ''; return; }
+  const L = itemLay(it), pc = Math.round(L.p * 100);
+  box.innerHTML = `<span class="lay-l">電腦／橫向</span>
+    <span class="seg" role="group" aria-label="圖片與說明排列"><button type="button" data-act="eLayM" data-m="v" aria-pressed="${L.m === 'v'}">上下</button><button type="button" data-act="eLayM" data-m="h" aria-pressed="${L.m === 'h'}">左右</button></span>
+    <label class="lay-p"><span>圖片</span><input type="range" id="eLayP" min="${LAY_MIN * 100}" max="${LAY_MAX * 100}" step="1" value="${pc}" aria-label="圖片佔的比例"><b class="num" id="eLayV">${pc}%</b></label>
+    <button type="button" class="chip" data-act="eLayAll" title="把這個排列和比例套用到本模組所有計時器">套用到全部</button>
+    <button type="button" class="chip" data-act="eOrder" title="手機直向畫面各區塊的上下順序（整個模組共用）">手機區塊順序${E.draft.porder && !sameOrder(E.draft.porder, DEF_ORDER) ? ' ✓' : '…'}</button>`;
+}
+function initLayout() {
+  $('#pEdit').addEventListener('input', e => {
+    if (e.target.id !== 'eLayP') return;
+    const it = selItem(); if (!it) return;
+    const L = itemLay(it); it.lay = { m: L.m, p: clamp(+e.target.value / 100, LAY_MIN, LAY_MAX) };
+    $('#eLayV').textContent = Math.round(it.lay.p * 100) + '%'; markDirty();
+  });
+}
+Object.assign(ACT, {
+  eLayM: a => { const it = selItem(); if (!it) return; const L = itemLay(it); if (L.m === a.dataset.m && it.lay) return; it.lay = { m: a.dataset.m, p: L.p }; markDirty(); renderLayRow(); },
+  eLayAll: () => {
+    const it = selItem(); if (!it) return; const L = itemLay(it);
+    E.draft.items.forEach(x => { x.lay = { m: L.m, p: L.p }; }); markDirty();
+    toast(`已套用到 ${E.draft.items.length} 個計時器（${L.m === 'h' ? '左右' : '上下'}，圖片 ${Math.round(L.p * 100)}%），按「儲存」生效`);
+  },
+  eOrder: async () => {
+    const r = await orderDialog({ title: '手機區塊順序（預設）', order: E.draft.porder, def: DEF_ORDER, defLabel: '恢復原始順序',
+      hint: '這個計時器模組在手機直向畫面的預設順序。正式使用時還可以臨時調整，下次開啟會回到這裡的設定。按「儲存」生效。' });
+    if (!r) return;
+    E.draft.porder = sameOrder(r, DEF_ORDER) ? null : r; if (!E.draft.porder) delete E.draft.porder;
+    markDirty(); renderLayRow();
+  },
+  // main screen (this time only)
+  layFlip: () => { const L = curLay(); if (!L.id) return; LAY[L.id] = { m: L.m === 'h' ? 'v' : 'h', p: L.p }; applySplit(); },
+  layReset: () => { const L = curLay(); if (L.id) delete LAY[L.id]; applySplit(); },
+  arrange: async () => {
+    const t = curTimer(); if (!t) { toast('還沒有選擇計時器模組'); return; }
+    const def = normOrder(t.porder), was = PORD;
+    const r = await orderDialog({ title: '調整區塊順序（這次）', order: curOrder(), def, defLabel: '回到預設',
+      hint: '只影響這次使用；換模組或重新開啟會回到編輯時設定的順序。', live: o => { PORD = o; applyOrder(); } });
+    PORD = r ? (sameOrder(r, def) ? null : r) : was; applyOrder();
+  },
 });
 
 /* ================= boot ================= */
