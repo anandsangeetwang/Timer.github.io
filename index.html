@@ -119,9 +119,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .image-box img{width:100%;height:100%;object-fit:contain}
 .placeholder{color:var(--arrow);display:flex;flex-direction:column;align-items:center;gap:8px;font-size:15px;text-align:center;padding:10px}
 .placeholder svg{width:72px;height:72px}
-.desc{background:var(--panel);border-radius:22px;padding:10px 18px;overflow-y:auto;min-height:0}
-.desc summary{list-style:none;font-weight:700;text-align:center;font-size:16px;cursor:default}
-.desc summary::-webkit-details-marker{display:none}
+.desc{background:var(--panel);border-radius:22px;padding:10px 18px 12px;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;position:relative;container-type:inline-size}
+.desc-h{font-weight:700;text-align:center;font-size:16px}
 .desc p{margin:6px 0 0;font-size:16px;line-height:1.7;white-space:pre-wrap;-webkit-user-select:text;user-select:text}
 
 /* side drawers */
@@ -253,9 +252,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 /* ---------- PORTRAIT PHONE ---------- */
 @media (max-width:700px){
   .main{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto;padding:0;column-gap:0;
-    grid-template-areas:"top" "head" "image" "split" "items" "desc" "controls";
+    grid-template-areas:"top" "head" "image" "split" "items" "controls" "desc";
     grid-template-rows:auto auto auto auto auto auto minmax(max-content,1fr);row-gap:10px;overflow-y:auto;overflow-x:hidden}
-  .main > .controls{align-self:end}
+  .main > .controls{align-self:auto}
   .splitter{grid-area:split;height:18px;margin-block:-6px}
   .main > *{margin-inline:16px}
   .topbar{grid-area:top;display:flex;align-items:center;gap:8px;padding-top:6px}
@@ -279,10 +278,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .stage > *{margin-inline:16px}
   .item-list{flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:4px 2px}
   .item-pill{font-size:15px;padding:8px 14px}
-  .desc{grid-area:desc;padding:8px 14px;max-height:none;overflow:visible}
-  .desc summary{cursor:pointer}
-  .desc summary::after{content:" ▸";font-size:13px}
-  .desc[open] summary::after{content:" ▾"}
+  .desc{grid-area:desc;padding:8px 14px;max-height:none;overflow:visible;container-type:normal;margin-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+  .desc-body{overflow:visible}
   .tabs{grid-area:tabs;position:static;flex-direction:row;gap:10px;pointer-events:auto}
   .tab-wrap{flex:1;position:static}
   .tab-wrap{flex:1}
@@ -290,8 +287,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .tab-btn{width:100%;border-radius:16px;padding:10px;letter-spacing:.05em;font-size:15px}
   .drawer,.tab-wrap.bottom .drawer{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;margin:0;border-radius:22px 22px 0 0;
     padding:18px 20px calc(20px + env(safe-area-inset-bottom,0px));z-index:70}
-  .controls{grid-area:controls;position:sticky;bottom:0;background:var(--bg);margin-inline:0;padding:10px 16px calc(12px + env(safe-area-inset-bottom,0px));
-    gap:40px;box-shadow:0 -4px 14px rgba(0,0,0,.06);z-index:6}
+  .controls{grid-area:controls;position:static;background:none;box-shadow:none;margin-inline:0;padding:0 16px;gap:40px}
   .ctl{width:64px;height:64px}.ctl.play{width:78px;height:78px}
   .groups{position:fixed;left:0;top:0;bottom:0;width:min(300px,84vw);z-index:80;margin:0;transform:translateX(-105%);transition:transform .25s;
     padding-top:calc(8px + env(safe-area-inset-top,0px));border-radius:0 22px 22px 0}
@@ -432,7 +428,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .splitter span{width:64px;height:6px;border-radius:3px;background:var(--panel);transition:background .15s}
 .splitter:hover span,.splitter.dragging span,.splitter:focus-visible span{background:var(--arrow)}
 .desc{min-height:0}
-.desc-body{margin:6px 0 0;font-size:16px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;-webkit-user-select:text;user-select:text}
+.desc-body{min-height:0;overflow-y:auto;margin:6px 0 0;font-size:16px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;-webkit-user-select:text;user-select:text}
 .ftabs{position:fixed;inset:0;pointer-events:none;z-index:55}
 .ftab{position:absolute;pointer-events:auto;background:linear-gradient(180deg,var(--leaf-a),var(--leaf-b));color:var(--leaf-ink);
   font-size:15px;padding:10px 7px;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.14);touch-action:none;cursor:grab;width:34px}
@@ -653,6 +649,55 @@ span.tag{cursor:default}
 .copy-item{color:var(--green);font-size:15px;padding:6px 4px}
 .copy-item svg{width:20px;height:20px}
 .edit-list .add-item + .add-item{padding-top:2px}
+/* ================= v3.7 rich description: two columns, fold, table, line, link, highlight ================= */
+@container (min-width:600px){
+  .desc-body{height:100%;columns:2;column-gap:34px;column-rule:1px solid rgba(22,25,29,.12);column-fill:auto;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
+}
+.desc.more::after{content:"";position:absolute;right:0;top:34px;bottom:12px;width:46px;pointer-events:none;
+  background:linear-gradient(90deg,rgba(200,208,218,0),var(--panel) 85%);border-radius:0 22px 22px 0}
+.desc-h{position:relative}
+.desc-nav{position:absolute;right:-6px;top:-3px;display:flex;align-items:center;gap:4px;font-weight:400;font-size:12px;color:var(--ink-soft)}
+.desc-nav[hidden]{display:none}
+.desc-nav button{width:28px;height:26px;border-radius:13px;background:var(--white);color:var(--ink-soft);font-size:12px;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.desc-nav button:disabled{opacity:.35;cursor:default}
+.rich a{color:#1f63b5;text-decoration:underline;text-underline-offset:2px;-webkit-user-select:text;user-select:text}
+.rich hr{border:0;border-top:2px solid rgba(22,25,29,.35);margin:10px 0;break-after:avoid}
+.rich table{border-collapse:collapse;margin:6px 0;max-width:100%;break-inside:avoid;white-space:normal;line-height:1.45}
+.rich td,.rich th{border:1px solid rgba(22,25,29,.35);padding:4px 8px;vertical-align:top;min-width:2.5em;text-align:left}
+.rich th{background:rgba(255,255,255,.55);font-weight:700}
+.rich details{margin:4px 0;border-radius:12px;background:rgba(255,255,255,.4);padding:2px 10px}
+.rich details > summary{cursor:pointer;font-weight:700;list-style:none;padding:3px 0;break-after:avoid}
+.rich details > summary::-webkit-details-marker{display:none}
+.rich details > summary::before{content:"▸";display:inline-block;width:1.1em;color:var(--ink-soft);transition:transform .15s}
+.rich details[open] > summary::before{transform:rotate(90deg)}
+.rich details > :not(summary){margin-bottom:4px}
+.desc-body.rich{-webkit-user-select:text;user-select:text}
+/* editor */
+.rt.rich details{border:1px dashed var(--arrow)}
+.rt.rich details > summary{cursor:text}
+.rt.rich table{min-width:60%}
+.rt-sep{width:1px;height:22px;background:rgba(22,25,29,.18);margin:0 2px}
+.rt-hl{width:20px;height:20px;border-radius:5px;border:1px solid rgba(0,0,0,.18);font-size:11px;line-height:18px;text-align:center}
+.rt-ins{font-size:12px;background:var(--white);border-radius:8px;padding:4px 7px;display:inline-flex;align-items:center;gap:3px}
+.rt-ins svg{width:15px;height:15px}
+.rt-tbl{display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:12px}
+.rt-tbl[hidden]{display:none}
+.rt-tbl b{color:var(--ink-soft);font-weight:700}
+.rt-tbl button{background:var(--white);border-radius:8px;padding:3px 7px;font-size:12px}
+.rt-tbl button.danger{color:var(--pink-deep)}
+.rt-dlg .fld{display:flex;flex-direction:column;gap:4px;margin:8px 0;font-size:14px}
+.rt-dlg .fld input[type=text],.rt-dlg .fld input[type=url]{font-size:16px;padding:8px 10px;border:2px solid var(--panel);border-radius:10px;width:100%}
+.rt-dlg .row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.rt-dlg .row input[type=number]{width:70px;font-size:16px;padding:6px 8px;border:2px solid var(--panel);border-radius:10px}
+.rt-dlg .err{color:var(--pink-deep);font-size:13px;min-height:1.2em}
+.media{grid-template-rows:minmax(0,1fr) minmax(210px,46%)}
+.desc-edit{container-type:inline-size}
+@container (max-width:760px){ .rt-ins span{display:none} .rt-ins{padding:4px 6px} }
+@media (max-width:700px){
+  .edit.detail .media{grid-template-rows:240px auto;min-height:auto}
+  .edit.detail .desc-edit{min-height:auto}
+  .edit.detail .rt{min-height:180px;max-height:none}
+}
 </style></head><body>
 <div class="app" id="app"></div>
 <div class="flash" id="flash"></div>
@@ -1155,7 +1200,7 @@ function buildShell() {
       <div class="timebox" id="timebox"><button class="time-pill num" id="time" data-act="toggle" aria-label="開始或暫停"></button><div class="count-pill num" id="count"></div></div></div>
     <div class="image-wrap" id="imgWrap"><div class="image-box" id="imgBox"></div></div>
     <div class="splitter" id="split" role="separator" aria-orientation="horizontal" aria-label="拖曳調整圖片與說明的大小" tabindex="0"><span></span></div>
-    <details class="desc" id="desc" open><summary>說明</summary><div class="desc-body" id="descText"></div></details>
+    <div class="desc" id="desc" role="region" aria-labelledby="descH"><div class="desc-h" id="descH">說明<span class="desc-nav" id="descNav" hidden><button type="button" data-act="descPrev" aria-label="上一欄">◀</button><span class="num" id="descPg"></span><button type="button" data-act="descNext" aria-label="下一欄">▶</button></span></div><div class="desc-body rich" id="descText"></div></div>
   </section>
   <div class="controls"><button class="ctl" data-act="reset" aria-label="重來">${I.reset}</button><button class="ctl play" id="playBtn" data-act="toggle" aria-label="開始"></button></div>
 </div>
@@ -1191,9 +1236,17 @@ function buildShell() {
         ${['#16191d', '#d64545', '#e8892b', '#2f8a3a', '#2f6fc0', '#8a4fc0', '#8a929c'].map(c => `<button type="button" class="rt-sw" data-act="rtColor" data-c="${c}" style="background:${c}" aria-label="文字顏色 ${c}"></button>`).join('')}
         <label class="rt-pick" title="自訂顏色"><input type="color" id="rtPick" value="#d64545" aria-label="自訂文字顏色"></label>
         <button type="button" class="rt-b" data-act="rtBold" aria-label="粗體"><b>B</b></button>
+        <span class="rt-sep"></span>
+        ${RT_HL.map(([c, n]) => `<button type="button" class="rt-hl" data-act="rtHilite" data-c="${c}" style="background:${c === 'transparent' ? 'var(--white)' : c}" title="文字底色：${n}" aria-label="文字底色 ${n}">${c === 'transparent' ? '無' : ''}</button>`).join('')}
+        <span class="rt-sep"></span>
+        <button type="button" class="rt-ins" data-act="rtLink" title="把選取的文字變成超連結">${RI.link}<span>連結</span></button>
+        <button type="button" class="rt-ins" data-act="rtHr" title="插入一條分隔線">${RI.hr}<span>分隔線</span></button>
+        <button type="button" class="rt-ins" data-act="rtTable" title="插入表格">${RI.table}<span>表格</span></button>
+        <button type="button" class="rt-ins" data-act="rtFold" title="插入可以摺疊的段落（選取文字會放進去）">${RI.fold}<span>摺疊</span></button>
         <button type="button" class="rt-clear" data-act="rtClear">清除格式</button>
       </div>
-      <div id="eDesc" class="rt" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="eDescLbl" data-ph="寫下這個動作的提示，選取文字後可以改大小和顏色"></div></div></div>
+      <div class="rt-tbl" id="rtTbl" hidden><b>表格</b><button type="button" data-act="tblRow">＋列</button><button type="button" data-act="tblCol">＋欄</button><button type="button" data-act="tblDelRow">−列</button><button type="button" data-act="tblDelCol">−欄</button><button type="button" class="danger" data-act="tblDel">刪除表格</button></div>
+      <div id="eDesc" class="rt rich" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="eDescLbl" data-ph="寫下這個動作的提示。選取文字後可以改大小、顏色、底色或加連結；也可以插入分隔線、表格、摺疊段落"></div></div></div>
   <input type="file" id="eFile" accept="image/*" hidden>
 </div>
 <div class="page set" id="pSet" hidden>
@@ -1253,7 +1306,7 @@ function renderStage() {
   const t = curTimer(), it = t && t.items[R.idx];
   $('#title').textContent = it ? (it.title || '未命名') : (t ? '還沒有計時項目' : '還沒有計時器'); $('#title').title = $('#title').textContent; requestAnimationFrame(fitTitle);
   $('#tName').textContent = t ? t.name : '瑜珈計時器';
-  $('#descText').innerHTML = it ? (it.descHtml ? cleanHTML(it.descHtml) : esc(it.desc || '')) : '';
+  $('#descText').innerHTML = it ? (it.descHtml ? cleanHTML(it.descHtml) : esc(it.desc || '')) : ''; richShow($('#descText'));
   const box = $('#imgBox'), want = it && it.imageId;
   box.dataset.img = want || '';
   if (want) mediaURL(want).then(u => { if (box.dataset.img === want) box.innerHTML = u ? `<img src="${u}" alt="${esc(it.title)}">` : ph(); });
@@ -1495,24 +1548,30 @@ function initFullText() {
 }
 
 /* ================= rich text (description) ================= */
-const RT_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'SPAN', 'BR', 'DIV', 'P', 'FONT']);
+const RT_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'SPAN', 'BR', 'DIV', 'P', 'FONT', 'A', 'HR', 'DETAILS', 'SUMMARY', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TD', 'TH']);
+const RT_COLOR = /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|[a-z]+)$/i;
+const safeHref = h => { h = String(h || '').trim(); return /^(https?:\/\/|mailto:|tel:)/i.test(h) ? h : ''; };
 function cleanHTML(html) {
   const doc = new DOMParser().parseFromString('<div>' + String(html || '') + '</div>', 'text/html');
   const walk = node => {
     for (const ch of [...node.childNodes]) {
-      if (ch.nodeType === 3) continue;
+      if (ch.nodeType === 3) { if (/^(TABLE|THEAD|TBODY|TR)$/.test(node.tagName) && !ch.nodeValue.trim()) ch.remove(); continue; }
       if (ch.nodeType !== 1 || !RT_TAGS.has(ch.tagName)) {
         if (ch.nodeType === 1 && !['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT'].includes(ch.tagName)) { walk(ch); ch.replaceWith(...ch.childNodes); } else ch.remove();
         continue;
       }
       const keep = {};
-      const color = ch.style && ch.style.color, size = ch.style && ch.style.fontSize, weight = ch.style && ch.style.fontWeight;
+      const color = ch.style && ch.style.color, size = ch.style && ch.style.fontSize, weight = ch.style && ch.style.fontWeight, bg = ch.style && ch.style.backgroundColor;
       if (ch.tagName === 'FONT') { const c = ch.getAttribute('color'); const sp = doc.createElement('span'); if (c) sp.style.color = c; sp.append(...ch.childNodes); ch.replaceWith(sp); walk(sp); continue; }
-      if (color && /^(#[0-9a-f]{3,8}|rgb[a]?\([\d\s.,%]+\)|[a-z]+)$/i.test(color)) keep.color = color;
+      if (color && RT_COLOR.test(color)) keep.color = color;
+      if (bg && RT_COLOR.test(bg) && !/^(transparent|rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\))$/i.test(bg)) keep.backgroundColor = bg;
       if (size && /^\d{1,2}(\.\d+)?px$/.test(size)) keep.fontSize = size;
       if (weight && /^(bold|[5-9]00)$/.test(weight)) keep.fontWeight = weight;
+      const href = ch.tagName === 'A' ? safeHref(ch.getAttribute('href')) : '';
+      if (ch.tagName === 'A' && !href) { walk(ch); ch.replaceWith(...ch.childNodes); continue; }
       for (const a of [...ch.attributes]) ch.removeAttribute(a.name);
       Object.assign(ch.style, keep);
+      if (href) ch.setAttribute('href', href);
       walk(ch);
     }
   };
@@ -1535,6 +1594,7 @@ function rtApply(kind, val) {
   try { document.execCommand('styleWithCSS', false, true); } catch {}
   if (kind === 'color') document.execCommand('foreColor', false, val);
   else if (kind === 'bold') document.execCommand('bold');
+  else if (kind === 'hilite') { if (!document.execCommand('hiliteColor', false, val)) document.execCommand('backColor', false, val); }
   else if (kind === 'clear') document.execCommand('removeFormat');
   else if (kind === 'size') {
     document.execCommand('styleWithCSS', false, false);
@@ -1616,7 +1676,7 @@ function renderEditForm() {
 }
 function renderEditMedia() {
   const it = selItem(); const box = $('#eImg');
-  $('#eDesc').innerHTML = it ? (it.descHtml ? cleanHTML(it.descHtml) : esc(it.desc || '').replace(/\n/g, '<br>')) : '';
+  $('#eDesc').innerHTML = it ? (it.descHtml ? cleanHTML(it.descHtml) : esc(it.desc || '').replace(/\n/g, '<br>')) : ''; richEditPrep($('#eDesc'));
   const want = it && it.imageId; box.dataset.img = want || '';
   const actions = want ? `<div class="img-actions"><span class="chip" data-act="pickImg">編輯排版</span><span class="chip" data-act="imgRemove">移除</span></div>` : '';
   if (want) mediaURL(want).then(u => { if (box.dataset.img === want) box.innerHTML = (u ? `<img src="${u}" alt="">` : ph()) + actions; });
@@ -2141,7 +2201,7 @@ const fmtTime = ts => ts ? new Date(ts).toLocaleString('zh-TW', { month: 'numeri
 
 /* ================= delete: long-press / swipe / multi-select ================= */
 let SEL = null; // { kind, ctx, keys:Set }
-const APP_VER = '3.6';
+const APP_VER = '3.7';
 let swallowClick = false;
 const KIND_LABEL = { group: '群組', timer: '計時器模組', item: '計時器', sound: '音效' };
 function delName(kind, key) {
@@ -2400,7 +2460,7 @@ function bindEvents() {
     if (e.key === 'Escape') { if (SEL) exitSelect(); else if (SORT) exitSort(); else if (openDrawer) closeDrawers(); else if (page !== 'main') goBack(); else closeMenu(); }
   });
   document.addEventListener('pointerdown', e => { if (openDrawer && !e.target.closest('.ftab,.fpanel,.scrim,.toast')) closeDrawers(); }, true);
-  $('#desc').addEventListener('click', e => { if (e.target.tagName === 'SUMMARY' && !isPortrait()) e.preventDefault(); });
+  initRichView(); initRichEdit();
   const ri = $('#ratioInput');
   ri.addEventListener('focus', () => { const t = curTimer(); ri.value = (t ? t.ratio || 1 : 1).toFixed(2); ri.select(); });
   ri.addEventListener('change', () => setRatio(parseFloat(ri.value)));
@@ -2447,7 +2507,7 @@ function bindEvents() {
   $('#sFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; const tid = e.target.dataset.target; e.target.value = ''; takeSoundFile(f, tid ? sndById(tid) : null); });
   $('#bFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) importData(f); });
   let lastPortrait = isPortrait();
-  addEventListener('resize', () => { const p = isPortrait(); if (p !== lastPortrait) { lastPortrait = p; if (!p) closeMenu(); $('#desc').open = !p; if (page === 'main') renderMain(); if (page === 'edit') renderEdit(); if (page === 'settings') renderSettings(); } });
+  addEventListener('resize', () => { const p = isPortrait(); if (p !== lastPortrait) { lastPortrait = p; if (!p) closeMenu(); if (page === 'main') renderMain(); if (page === 'edit') renderEdit(); if (page === 'settings') renderSettings(); } });
 }
 
 /* remove images / audio files nothing points to any more */
@@ -3475,6 +3535,189 @@ Object.assign(ACT, {
   clipTimer: a => clipTimers([a.dataset.id], a.dataset.g),
 });
 
+/* ================= rich description: highlight, link, line, table, fold + two-column view (v3.7) ================= */
+const RT_HL = [['#fff176', '黃'], ['#c5ec9f', '綠'], ['#ffc9d6', '粉紅'], ['#c9defb', '藍'], ['#ffd9a8', '橘'], ['transparent', '無']];
+const RI = {
+  link: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
+  hr: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M7 6h10M7 18h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".45"/></svg>',
+  table: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 10h18M3 15h18M10 4.5v15" stroke="currentColor" stroke-width="1.8"/></svg>',
+  fold: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6l4 3-4 3z" fill="currentColor"/><path d="M12 9h8M5 16h15M5 20h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+};
+
+/* ---------- main screen view ---------- */
+function richShow(el) {
+  if (!el) return;
+  for (const a of el.querySelectorAll('a[href]')) { a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+  el.scrollLeft = 0; el.scrollTop = 0;
+  requestAnimationFrame(descMoreUpd);
+}
+const DESC_GAP = 34;
+const descPitch = b => (b.clientWidth + DESC_GAP) / 2; // one column + gap in two-column mode
+function descMoreUpd() {
+  const d = $('#desc'), b = $('#descText'), nav = $('#descNav'); if (!d || !b) return;
+  const over = b.scrollWidth - b.clientWidth > 4 && getComputedStyle(b).columnCount !== 'auto';
+  d.classList.toggle('more', over && b.scrollLeft + b.clientWidth < b.scrollWidth - 4);
+  nav.hidden = !over; if (!over) return;
+  const pt = descPitch(b), total = Math.max(2, Math.round((b.scrollWidth + DESC_GAP) / pt)), first = Math.round(b.scrollLeft / pt) + 1;
+  $('#descPg').textContent = `${first}–${Math.min(total, first + 1)} / ${total} 欄`;
+  nav.firstChild.disabled = b.scrollLeft <= 2; nav.lastChild.disabled = b.scrollLeft + b.clientWidth >= b.scrollWidth - 4;
+}
+function descStep(dir) { const b = $('#descText'); const pt = descPitch(b); b.scrollTo({ left: Math.round(b.scrollLeft / pt + dir) * pt, behavior: reduceMotion() ? 'auto' : 'smooth' }); }
+function initRichView() {
+  const b = $('#descText');
+  let snapT = 0, wheelLock = 0, acc = 0;
+  b.addEventListener('scroll', () => {
+    descMoreUpd(); clearTimeout(snapT);
+    // after a swipe, line the columns up again
+    snapT = setTimeout(() => { if (b.scrollWidth - b.clientWidth < 4) return; const pt = descPitch(b), want = Math.min(b.scrollWidth - b.clientWidth, Math.round(b.scrollLeft / pt) * pt); if (Math.abs(want - b.scrollLeft) > 2) b.scrollTo({ left: want, behavior: 'smooth' }); }, 160);
+  }, { passive: true });
+  b.addEventListener('toggle', () => requestAnimationFrame(descMoreUpd), true); // opening a fold can add columns
+  // in two-column mode the extra columns are to the right: the mouse wheel moves one column at a time
+  b.addEventListener('wheel', e => {
+    if (b.scrollWidth - b.clientWidth < 4 || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    const max = b.scrollWidth - b.clientWidth;
+    if ((e.deltaY > 0 && b.scrollLeft >= max - 2) || (e.deltaY < 0 && b.scrollLeft <= 2)) return;
+    e.preventDefault();
+    if (Date.now() < wheelLock) return;
+    acc += e.deltaY; if (Math.abs(acc) < 30) return;
+    descStep(Math.sign(acc)); acc = 0; wheelLock = Date.now() + 380;
+  }, { passive: false });
+  addEventListener('resize', () => requestAnimationFrame(descMoreUpd));
+}
+
+/* ---------- editor helpers ---------- */
+function richEditPrep(ed) {
+  if (!ed) return;
+  for (const d of ed.querySelectorAll('details')) d.open = true; // always open while editing
+  tblBarUpd();
+}
+function rtCaret() {
+  const ed = $('#eDesc'); ed.focus();
+  const sel = getSelection();
+  if (rtRange && ed.contains(rtRange.commonAncestorContainer)) { sel.removeAllRanges(); sel.addRange(rtRange); }
+  else if (!(sel.rangeCount && ed.contains(sel.getRangeAt(0).commonAncestorContainer))) {
+    const r = document.createRange(); r.selectNodeContents(ed); r.collapse(false); sel.removeAllRanges(); sel.addRange(r);
+  }
+  return sel.getRangeAt(0);
+}
+function rtInsert(html, focusSel, selectAll) {
+  rtCaret();
+  document.execCommand('insertHTML', false, html);
+  const ed = $('#eDesc'); richEditPrep(ed);
+  const mark = ed.querySelector('[data-new]'), sel = getSelection();
+  if (mark) { // put the caret inside what was just inserted
+    const tgt = (focusSel && mark.querySelector(focusSel)) || mark; mark.removeAttribute('data-new');
+    const r = document.createRange(); r.selectNodeContents(tgt); if (!selectAll) r.collapse(true); sel.removeAllRanges(); sel.addRange(r);
+  }
+  if (sel.rangeCount) rtRange = sel.getRangeAt(0).cloneRange();
+  syncDesc(); tblBarUpd();
+}
+const rtSelHTML = r => { const d = document.createElement('div'); d.append(r.cloneContents()); return d.innerHTML; };
+const caretEl = () => { const s = getSelection(); if (!s.rangeCount) return null; let n = s.getRangeAt(0).startContainer; if (n.nodeType !== 1) n = n.parentElement; const ed = $('#eDesc'); return n && ed && ed.contains(n) ? n : null; };
+
+/* small dialog with custom fields; resolves to the clicked button value or null */
+function rtDialog(title, fields, buttons, onOpen) {
+  return new Promise(res => {
+    const s = document.createElement('div'); s.className = 'scrim';
+    s.innerHTML = `<div class="dialog rt-dlg" role="dialog" aria-modal="true" aria-label="${esc(title)}"><h3>${esc(title)}</h3>${fields}<div class="err" aria-live="polite"></div>
+      <div class="btns">${buttons.map((b, i) => `<button type="button" data-i="${i}" class="${b.primary ? 'primary' : ''} ${b.danger ? 'danger' : ''}">${esc(b.label)}</button>`).join('')}</div></div>`;
+    document.body.append(s);
+    const done = v => { s.remove(); res(v); };
+    const check = v => { const b = buttons.find(x => x.value === v); const msg = b && b.check ? b.check(s) : ''; if (msg) { s.querySelector('.err').textContent = msg; return; } done(v == null ? null : { value: v, root: s }); };
+    s.addEventListener('click', e => { const b = e.target.closest('button[data-i]'); if (b) check(buttons[+b.dataset.i].value); });
+    s.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { e.stopPropagation(); done(null); }
+      if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); const p = buttons.find(b => b.primary); if (p) check(p.value); }
+    });
+    setTimeout(() => { const f = s.querySelector('input'); if (f) { f.focus(); f.select && f.select(); } onOpen && onOpen(s); }, 60);
+  });
+}
+function normURL(u) {
+  u = String(u || '').trim(); if (!u) return '';
+  if (/^www\./i.test(u) || /^[\w-]+(\.[\w-]+)+(\/|$)/.test(u)) u = 'https://' + u;
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(u)) u = 'mailto:' + u;
+  return safeHref(u);
+}
+async function rtLink() {
+  const r0 = rtCaret().cloneRange();
+  const a0 = caretEl() && caretEl().closest('a');
+  const hasText = !r0.collapsed;
+  const r = await rtDialog(a0 ? '編輯超連結' : '加入超連結',
+    `<label class="fld">網址<input type="url" id="rtUrl" value="${esc(a0 ? a0.getAttribute('href') : 'https://')}" placeholder="https://…" inputmode="url" autocomplete="off"></label>
+     ${!a0 && !hasText ? '<label class="fld">顯示文字（可不填，會直接顯示網址）<input type="text" id="rtUrlTx" maxlength="200"></label>' : ''}`,
+    [{ label: '取消', value: null }, ...(a0 ? [{ label: '移除連結', value: 'unlink', danger: true }] : []),
+      { label: '確定', value: 'ok', primary: true, check: s => normURL(s.querySelector('#rtUrl').value) ? '' : '請輸入以 https:// 開頭的網址（或 email）' }]);
+  if (!r) { rtCaret(); return; }
+  const ed = $('#eDesc'); ed.focus(); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r0);
+  if (r.value === 'unlink') { a0.replaceWith(...a0.childNodes); syncDesc(); return; }
+  const url = normURL(r.root.querySelector('#rtUrl').value);
+  if (a0) a0.setAttribute('href', url);
+  else if (hasText) document.execCommand('createLink', false, url);
+  else { const tx = (r.root.querySelector('#rtUrlTx') || {}).value || ''; document.execCommand('insertHTML', false, `<a href="${esc(url)}">${esc(tx.trim() || url)}</a>&nbsp;`); }
+  if (sel.rangeCount) rtRange = sel.getRangeAt(0).cloneRange();
+  syncDesc();
+}
+async function rtTable() {
+  const r0 = rtCaret().cloneRange();
+  const r = await rtDialog('插入表格',
+    `<div class="row"><label>列數 <input type="number" id="tbR" min="1" max="30" value="3" inputmode="numeric"></label><label>欄數 <input type="number" id="tbC" min="1" max="8" value="2" inputmode="numeric"></label></div>
+     <label class="chk"><input type="checkbox" id="tbH" checked> 第一列當標題</label>`,
+    [{ label: '取消', value: null }, { label: '插入', value: 'ok', primary: true }]);
+  const ed = $('#eDesc'); ed.focus(); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r0);
+  if (!r) return;
+  const R = clamp(parseInt(r.root.querySelector('#tbR').value, 10) || 3, 1, 30), Cn = clamp(parseInt(r.root.querySelector('#tbC').value, 10) || 2, 1, 8), H = r.root.querySelector('#tbH').checked;
+  let html = '<table data-new="1"><tbody>';
+  for (let i = 0; i < R; i++) { const tag = H && i === 0 ? 'th' : 'td'; html += '<tr>' + Array.from({ length: Cn }, (_, j) => `<${tag}>${tag === 'th' ? '標題' + (j + 1) : '<br>'}</${tag}>`).join('') + '</tr>'; }
+  rtInsert(html + '</tbody></table><div><br></div>', H ? 'th' : 'td', H);
+}
+function rtFold() {
+  const r = rtCaret();
+  const inner = r.collapsed ? '在這裡寫要收起來的內容' : rtSelHTML(r);
+  rtInsert(`<details open data-new="1"><summary>摺疊標題（點一下改文字）</summary><div>${inner}</div></details><div><br></div>`, 'summary', true);
+}
+function rtHr() { rtCaret(); document.execCommand('insertHorizontalRule'); const sel = getSelection(); if (sel.rangeCount) rtRange = sel.getRangeAt(0).cloneRange(); syncDesc(); }
+
+/* table tools (shown while the caret is in a table) */
+function tblBarUpd() { const b = $('#rtTbl'); if (!b) return; const c = caretEl(); b.hidden = !(c && c.closest('td,th') && page === 'edit'); }
+function tblAct(kind) {
+  const c = caretEl(); const cell = c && c.closest('td,th'); if (!cell) { toast('請先把游標放在表格裡'); return; }
+  const tr = cell.parentElement, table = cell.closest('table'), rows = [...table.rows], ci = cell.cellIndex;
+  const mk = (tag, html) => { const x = document.createElement(tag); x.innerHTML = html; return x; };
+  let focus = null;
+  if (kind === 'row') { const n = tr.cloneNode(false); for (let i = 0; i < tr.cells.length; i++) n.append(mk('td', '<br>')); tr.after(n); focus = n.cells[ci]; }
+  if (kind === 'col') { for (const row of rows) { const ref = row.cells[Math.min(ci, row.cells.length - 1)]; const x = mk(ref && ref.tagName === 'TH' ? 'th' : 'td', '<br>'); ref ? ref.after(x) : row.append(x); if (row === tr) focus = x; } }
+  if (kind === 'delRow') { if (rows.length <= 1) return tblAct('del'); const nb = tr.nextElementSibling || tr.previousElementSibling; tr.remove(); focus = nb && nb.cells[Math.min(ci, nb.cells.length - 1)]; }
+  if (kind === 'delCol') { if (tr.cells.length <= 1) return tblAct('del'); for (const row of rows) if (row.cells[ci]) row.cells[ci].remove(); focus = tr.cells[Math.min(ci, tr.cells.length - 1)]; }
+  if (kind === 'del') { const nx = table.nextSibling; table.remove(); focus = nx && nx.nodeType === 1 ? nx : null; }
+  const ed = $('#eDesc'); ed.focus();
+  if (focus) { const r = document.createRange(); r.selectNodeContents(focus); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r); rtRange = r.cloneRange(); }
+  syncDesc(); tblBarUpd();
+}
+
+function initRichEdit() {
+  const ed = $('#eDesc');
+  // a fold stays open while editing; clicking its title just places the caret
+  ed.addEventListener('click', e => { if (e.target.closest('summary')) e.preventDefault(); });
+  ed.addEventListener('toggle', e => { if (e.target.tagName === 'DETAILS' && !e.target.open) e.target.open = true; }, true);
+  ed.addEventListener('keydown', e => {
+    const c = caretEl(); const sm = c && c.closest('summary');
+    if (sm && e.key === ' ') { e.preventDefault(); document.execCommand('insertText', false, ' '); }
+    else if (sm && e.key === 'Enter') { // Enter in a fold title jumps into the fold's content
+      e.preventDefault(); let body = sm.nextElementSibling;
+      if (!body) { body = document.createElement('div'); body.innerHTML = '<br>'; sm.after(body); }
+      const r = document.createRange(); r.selectNodeContents(body); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    }
+  });
+  document.addEventListener('selectionchange', tblBarUpd);
+  $('#rtTbl').addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
+}
+Object.assign(ACT, {
+  rtHilite: a => rtApply('hilite', a.dataset.c),
+  rtLink: () => rtLink(), rtHr: () => rtHr(), rtTable: () => rtTable(), rtFold: () => rtFold(),
+  tblRow: () => tblAct('row'), tblCol: () => tblAct('col'), tblDelRow: () => tblAct('delRow'), tblDelCol: () => tblAct('delCol'), tblDel: () => tblAct('del'),
+  descPrev: () => descStep(-1), descNext: () => descStep(1),
+});
+
 /* ================= boot ================= */
 (async () => {
   await Store.open();
@@ -3490,7 +3733,6 @@ Object.assign(ACT, {
   save();
   if (!S.sw) S.sw = SWdef();
   buildShell(); bindEvents(); initDrag(); initBackHandle(); initDeleteGestures(); initFloatTabs(); initSplitter(); bindComposer(); initFullText(); initSortDrag(); initShortcuts(); initTray();
-  $('#desc').open = !isPortrait();
   showPage('main'); renderMain();
   setInterval(loop, 100);
   setTimeout(cleanMedia, 3000);
