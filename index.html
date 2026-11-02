@@ -736,6 +736,59 @@ span.tag{cursor:default}
   .edit.detail .media{grid-template-rows:auto 240px auto}
   .lay-p input{width:100px}
 }
+/* ================= v3.9 edit-page layout preview ================= */
+.pv{position:fixed;right:12px;top:70px;width:min(48vw,760px);height:min(60vh,560px);min-width:340px;min-height:260px;z-index:60;
+  background:var(--white);border-radius:16px;box-shadow:0 10px 36px rgba(20,30,45,.32);display:grid;grid-template-rows:auto auto minmax(0,1fr);overflow:hidden;resize:both}
+.pv[hidden]{display:none}
+.pv-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:8px 10px;background:var(--green);color:#fff;cursor:move;touch-action:none}
+.pv-t{font-size:14px;margin-right:2px}
+.pv-head .seg{background:rgba(255,255,255,.25)}
+.pv-head .seg button{color:#fff}
+.pv-head .seg button[aria-pressed="true"]{background:var(--white);color:var(--ink)}
+.pv-size{font-size:12px;border:0;border-radius:8px;padding:3px 4px;max-width:150px;cursor:pointer}
+.pv-nav{display:inline-flex;align-items:center;gap:2px;font-size:12px}
+.pv-nav button{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.25);color:#fff;font-size:16px;line-height:1}
+.pv-n{min-width:3.4em;text-align:center}
+.pv-max{margin-left:auto;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.25);color:#fff;font-size:15px;line-height:1}
+.pv-x{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.25);color:#fff;font-size:18px;line-height:1}
+.pv-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:6px 10px;background:var(--panel-2);font-size:13px}
+.pv-tip{font-size:12px;color:var(--ink-soft)}
+.pv.other .pv-head{background:#7a4a9c}
+.pv.other .pv-t::after{content:"（模擬另一種裝置）";font-weight:400;font-size:12px}
+.pv-body{display:grid;place-items:center;background:repeating-conic-gradient(#eef1f4 0 25%,#f7f8fa 0 50%) 0 0/18px 18px;overflow:hidden;padding:8px}
+.pv-scale{position:relative;overflow:hidden;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.25);background:#fff}
+.pv-frame{position:absolute;left:0;top:0;border:0;transform-origin:0 0;background:#fff}
+.pv-btn[aria-pressed="true"]{background:var(--green);color:#fff}
+.scrim.sheet.left{justify-items:start;align-items:center}
+.scrim.sheet.top{align-items:start}
+@media (max-width:700px){
+  .pv{left:0!important;right:0!important;top:auto!important;bottom:0!important;width:auto!important;height:56vh!important;min-width:0;border-radius:18px 18px 0 0;resize:none}
+  .pv-head{cursor:default}
+  .edit.pv-open{padding-bottom:58vh}
+  .pv-size{max-width:120px}
+}
+.pv.max{left:8px!important;top:8px!important;right:8px!important;bottom:8px!important;width:auto!important;height:auto!important;resize:none}
+@media (max-width:700px){
+  .pv-head{padding:6px 8px;gap:4px 6px}
+  .pv-t{font-size:13px}
+  .pv.other .pv-t::after{content:"（模擬）"}
+  .pv-head .seg button{padding:4px 8px;font-size:12px}
+  .pv-ctl{padding:4px 8px;gap:4px 8px}
+  .pv.max{inset:0!important;height:100%!important;border-radius:0}
+}
+/* ================= v3.10 edit page shows the real layout ================= */
+.media > .lay-row{grid-area:lay}.media > #eImg{grid-area:image}.media > .e-split{grid-area:split}.media > .desc-edit{grid-area:desc}
+.media{grid-template-areas:"lay" "image" "split" "desc";grid-template-rows:auto minmax(60px,.68fr) 14px minmax(140px,.32fr);gap:0}
+.media > .lay-row{margin-bottom:12px}
+.media.side{column-gap:0}
+.media.side .e-split{cursor:col-resize;min-height:0}
+.media.side .e-split > span{width:6px;height:64px}
+.media .desc-edit,.media #eImg{min-width:0}
+@media (max-width:700px){
+  .media > .e-split{display:none}
+  .edit.detail .media{grid-template-areas:"lay" "image" "desc";grid-template-rows:auto 240px auto;gap:12px}
+  .media > .lay-row{margin-bottom:0}
+}
 </style></head><body>
 <div class="app" id="app"></div>
 <div class="flash" id="flash"></div>
@@ -1161,6 +1214,7 @@ function showPage(p) {
   $('#pMain').hidden = p !== 'main'; $('#pEdit').hidden = p !== 'edit'; $('#pSet').hidden = p !== 'settings'; $('#pComp').hidden = p !== 'compose';
   closeDrawers(); closeMenu(); renderBack(); renderTabs();
   if (p !== 'settings') stopPreview();
+  pvPageChanged(p);
 }
 function leaveToMain(fromPop) {
   showPage('main'); renderMain();
@@ -1268,6 +1322,7 @@ function buildShell() {
   <div class="edit-list"><div class="edit-items" id="eItems"></div><button class="add-item" data-act="addItem">${I.plus}新增計時項目</button><button class="add-item copy-item" data-act="clipItem" title="複製目前選取的計時器（${MOD} + C），再到任何模組按「貼上計時器」">${IC_COPY}<span>複製這個計時器</span></button><button class="add-item paste-item" id="ePaste" data-act="pasteItems" hidden>${IC_COPY}<span>貼上計時器</span></button><p class="hint" id="eHint"></p></div>
   <div class="form" id="eForm"></div>
   <div class="media"><div class="lay-row" id="eLay"></div><div class="image-box" id="eImg" data-act="pickImg" role="button" tabindex="0" aria-label="選擇圖片"></div>
+    <div class="splitter e-split" id="eSplit" role="separator" aria-orientation="horizontal" aria-label="拖曳調整圖片與說明的比例（這個計時器的預設）" tabindex="0"><span></span></div>
     <div class="desc-edit"><span class="de-label" id="eDescLbl">說明區塊</span>
       <div class="rt-bar" role="toolbar" aria-label="選取文字後設定格式">
         <label class="rt-size">字級<input type="number" id="rtSize" min="8" max="96" step="1" value="16" inputmode="numeric" list="rtSizes" aria-label="字體大小（像素）"><datalist id="rtSizes"><option value="12"><option value="14"><option value="16"><option value="18"><option value="20"><option value="24"><option value="28"><option value="32"><option value="40"><option value="48"></datalist><button type="button" class="rt-b" data-act="rtSizeDn" aria-label="字級減 2">−</button><button type="button" class="rt-b" data-act="rtSizeUp" aria-label="字級加 2">＋</button></label>
@@ -1501,17 +1556,7 @@ function applySplit() {
     iw.style.height = Math.round(clamp(S.settings.splitP || .38, .18, .75) * innerHeight) + 'px';
   } else {
     iw.style.height = '';
-    const L = curLay(), p = L.p, q = (1 - p).toFixed(3);
-    stage.classList.toggle('side', L.m === 'h');
-    if (L.m === 'h') {
-      stage.style.gridTemplateAreas = '"head head head" "image split desc"';
-      stage.style.gridTemplateColumns = `minmax(0,${p}fr) 14px minmax(0,${q}fr)`;
-      stage.style.gridTemplateRows = 'auto minmax(0,1fr)';
-    } else {
-      stage.style.gridTemplateAreas = '"head" "image" "split" "desc"';
-      stage.style.gridTemplateColumns = 'minmax(0,1fr)';
-      stage.style.gridTemplateRows = `auto minmax(0,${p}fr) 14px minmax(52px,${q}fr)`;
-    }
+    const L = curLay(); stageGrid(stage, L);
     sp.setAttribute('aria-orientation', L.m === 'h' ? 'vertical' : 'horizontal');
     const flip = $('#splitFlip'), rst = $('#splitRst');
     if (flip) { flip.textContent = L.m === 'h' ? '⇅' : '⇆'; flip.title = L.m === 'h' ? '這次改成上下排列' : '這次改成左右排列'; }
@@ -1745,7 +1790,7 @@ function renderEditForm() {
   <div class="line"><span>不使用全域</span><button type="button" class="toggle" role="switch" aria-checked="${!!it.noGlobal}" data-act="noGlobal" aria-label="不使用全域"></button></div>`;
 }
 function renderEditMedia() {
-  renderLayRow();
+  renderLayRow(); pvRefresh();
   const it = selItem(); const box = $('#eImg');
   $('#eDesc').innerHTML = it ? (it.descHtml ? cleanHTML(it.descHtml) : esc(it.desc || '').replace(/\n/g, '<br>')) : ''; richEditPrep($('#eDesc'));
   const want = it && it.imageId; box.dataset.img = want || '';
@@ -1753,7 +1798,7 @@ function renderEditMedia() {
   if (want) mediaURL(want).then(u => { if (box.dataset.img === want) box.innerHTML = (u ? `<img src="${u}" alt="">` : ph()) + actions; });
   else box.innerHTML = `<div class="placeholder">${I.pose}<span>點這裡排版圖片：可放多張圖、加文字、畫重點</span></div>`;
 }
-function markDirty() { E.dirty = true; }
+function markDirty() { E.dirty = true; pvRefresh(); }
 function applySpin(f, d, typed) {
   const it = selItem(); if (!it) return;
   if (f === 'h' || f === 'm' || f === 's') {
@@ -2272,7 +2317,7 @@ const fmtTime = ts => ts ? new Date(ts).toLocaleString('zh-TW', { month: 'numeri
 
 /* ================= delete: long-press / swipe / multi-select ================= */
 let SEL = null; // { kind, ctx, keys:Set }
-const APP_VER = '3.8';
+const APP_VER = '3.10';
 let swallowClick = false;
 const KIND_LABEL = { group: '群組', timer: '計時器模組', item: '計時器', sound: '音效' };
 function delName(kind, key) {
@@ -3803,20 +3848,37 @@ function normOrder(o) {
 }
 const sameOrder = (a, b) => normOrder(a).join() === normOrder(b).join();
 function curOrder() { const t = curTimer(); return normOrder(PORD || (t && t.porder)); }
-function applyOrder() {
-  const m = $('#pMain'); if (!m) return;
-  if (!isPortrait()) { m.style.gridTemplateAreas = ''; m.style.gridTemplateRows = ''; return; }
+function orderGrid(m, order) {
   const areas = ['top'];
-  for (const k of curOrder()) { areas.push(k); if (k === 'image') areas.push('split'); }
+  for (const k of normOrder(order)) { areas.push(k); if (k === 'image') areas.push('split'); }
   m.style.gridTemplateAreas = areas.map(a => `"${a}"`).join(' ') + ' "."';
   m.style.gridTemplateRows = `repeat(${areas.length}, auto) 1fr`;
 }
+function applyOrder() {
+  const m = $('#pMain'); if (!m) return;
+  if (!isPortrait()) { m.style.gridTemplateAreas = ''; m.style.gridTemplateRows = ''; return; }
+  orderGrid(m, curOrder());
+}
+/* landscape stage grid for a layout L = {m, p} (also used by the edit-page preview) */
+function stageGrid(stage, L) {
+  const p = L.p, q = (1 - p).toFixed(3);
+  stage.classList.toggle('side', L.m === 'h');
+  if (L.m === 'h') {
+    stage.style.gridTemplateAreas = '"head head head" "image split desc"';
+    stage.style.gridTemplateColumns = `minmax(0,${p}fr) 14px minmax(0,${q}fr)`;
+    stage.style.gridTemplateRows = 'auto minmax(0,1fr)';
+  } else {
+    stage.style.gridTemplateAreas = '"head" "image" "split" "desc"';
+    stage.style.gridTemplateColumns = 'minmax(0,1fr)';
+    stage.style.gridTemplateRows = `auto minmax(0,${p}fr) 14px minmax(52px,${q}fr)`;
+  }
+}
 
 /* order editor: used by the edit page (default) and the main screen (this time only) */
-function orderDialog({ title, order, def, defLabel, live, hint }) {
+function orderDialog({ title, order, def, defLabel, live, hint, pos }) {
   return new Promise(res => {
     let cur = normOrder(order);
-    const s = document.createElement('div'); s.className = 'scrim sheet';
+    const s = document.createElement('div'); s.className = 'scrim sheet' + (pos ? ' ' + pos : '');
     const draw = () => {
       s.querySelector('.ord-list').innerHTML = cur.map((k, i) => `<li><span>${i + 1}. ${BLOCKS[k]}</span>
         <button type="button" data-mv="-1" data-i="${i}" aria-label="${BLOCKS[k]} 往上" ${i ? '' : 'disabled'}>▲</button><button type="button" data-mv="1" data-i="${i}" aria-label="${BLOCKS[k]} 往下" ${i < cur.length - 1 ? '' : 'disabled'}>▼</button></li>`).join('');
@@ -3846,34 +3908,40 @@ function renderLayRow() {
   const box = $('#eLay'), it = E.draft && selItem(); if (!box) return;
   if (!it) { box.innerHTML = ''; return; }
   const L = itemLay(it), pc = Math.round(L.p * 100);
-  box.innerHTML = `<span class="lay-l">電腦／橫向</span>
+  box.innerHTML = `<button type="button" class="chip pv-btn" data-act="pvToggle" aria-pressed="${!!PV.open}">${pvBtnText()}</button><span class="lay-l">電腦／橫向</span>
     <span class="seg" role="group" aria-label="圖片與說明排列"><button type="button" data-act="eLayM" data-m="v" aria-pressed="${L.m === 'v'}">上下</button><button type="button" data-act="eLayM" data-m="h" aria-pressed="${L.m === 'h'}">左右</button></span>
     <label class="lay-p"><span>圖片</span><input type="range" id="eLayP" min="${LAY_MIN * 100}" max="${LAY_MAX * 100}" step="1" value="${pc}" aria-label="圖片佔的比例"><b class="num" id="eLayV">${pc}%</b></label>
     <button type="button" class="chip" data-act="eLayAll" title="把這個排列和比例套用到本模組所有計時器">套用到全部</button>
     <button type="button" class="chip" data-act="eOrder" title="手機直向畫面各區塊的上下順序（整個模組共用）">手機區塊順序${E.draft.porder && !sameOrder(E.draft.porder, DEF_ORDER) ? ' ✓' : '…'}</button>`;
+  editMediaGrid();
 }
 function initLayout() {
+  initEditSplit();
   $('#pEdit').addEventListener('input', e => {
     if (e.target.id !== 'eLayP') return;
     const it = selItem(); if (!it) return;
     const L = itemLay(it); it.lay = { m: L.m, p: clamp(+e.target.value / 100, LAY_MIN, LAY_MAX) };
-    $('#eLayV').textContent = Math.round(it.lay.p * 100) + '%'; markDirty();
+    $('#eLayV').textContent = Math.round(it.lay.p * 100) + '%'; editMediaGrid(); pvEnsure('pc'); markDirty();
   });
 }
 Object.assign(ACT, {
-  eLayM: a => { const it = selItem(); if (!it) return; const L = itemLay(it); if (L.m === a.dataset.m && it.lay) return; it.lay = { m: a.dataset.m, p: L.p }; markDirty(); renderLayRow(); },
+  eLayM: a => { const it = selItem(); if (!it) return; const L = itemLay(it); if (L.m === a.dataset.m && it.lay) return; it.lay = { m: a.dataset.m, p: L.p }; pvEnsure('pc'); markDirty(); renderLayRow(); },
   eLayAll: () => {
     const it = selItem(); if (!it) return; const L = itemLay(it);
     E.draft.items.forEach(x => { x.lay = { m: L.m, p: L.p }; }); markDirty();
     toast(`已套用到 ${E.draft.items.length} 個計時器（${L.m === 'h' ? '左右' : '上下'}，圖片 ${Math.round(L.p * 100)}%），按「儲存」生效`);
   },
   eOrder: async () => {
-    const r = await orderDialog({ title: '手機區塊順序（預設）', order: E.draft.porder, def: DEF_ORDER, defLabel: '恢復原始順序',
-      hint: '這個計時器模組在手機直向畫面的預設順序。正式使用時還可以臨時調整，下次開啟會回到這裡的設定。按「儲存」生效。' });
-    if (!r) return;
+    pvEnsure('phone');
+    const r = await orderDialog({ title: '手機區塊順序（預設）', order: E.draft.porder, def: DEF_ORDER, defLabel: '恢復原始順序', pos: isPortrait() ? 'top' : 'left',
+      hint: '這個計時器模組在手機直向畫面的預設順序（右邊的預覽會跟著變）。正式使用時還可以臨時調整，下次開啟會回到這裡的設定。按「儲存」生效。',
+      live: o => { PV.tmpOrder = o; pvRefresh(true); } });
+    PV.tmpOrder = null;
+    if (!r) { pvRefresh(true); return; }
     E.draft.porder = sameOrder(r, DEF_ORDER) ? null : r; if (!E.draft.porder) delete E.draft.porder;
     markDirty(); renderLayRow();
   },
+  pvToggle: () => (PV.open ? pvClose() : pvOpen(pvDeviceMode() === 'pc' ? 'phone' : 'pc')),
   // main screen (this time only)
   layFlip: () => { const L = curLay(); if (!L.id) return; LAY[L.id] = { m: L.m === 'h' ? 'v' : 'h', p: L.p }; applySplit(); },
   layReset: () => { const L = curLay(); if (L.id) delete LAY[L.id]; applySplit(); },
@@ -3885,6 +3953,220 @@ Object.assign(ACT, {
     PORD = r ? (sameOrder(r, def) ? null : r) : was; applyOrder();
   },
 });
+
+/* open the preview (or switch it) to the kind of screen being adjusted */
+function pvEnsure(mode) {
+  if (mode === pvDeviceMode()) return; // same kind of screen: the edit page itself shows it
+  if (!PV.open) pvOpen(mode);
+  else if (PV.mode !== mode) { PV.mode = mode; pvHead(); pvRefresh(true); }
+}
+
+const pvBtnText = () => (PV.open ? '關閉模擬' : pvDeviceMode() === 'pc' ? '模擬手機畫面' : '模擬電腦畫面');
+
+/* ---------- edit page: the image box and the description editor are laid out exactly like the main screen ---------- */
+function editMediaGrid() {
+  const md = document.querySelector('#pEdit .media'), sp = $('#eSplit'); if (!md || !sp) return;
+  const it = E.draft && selItem();
+  if (isPortrait() || !it) { md.classList.remove('side'); md.style.gridTemplateAreas = md.style.gridTemplateRows = md.style.gridTemplateColumns = ''; return; }
+  const L = itemLay(it), p = L.p, q = (1 - p).toFixed(3);
+  md.classList.toggle('side', L.m === 'h');
+  if (L.m === 'h') {
+    md.style.gridTemplateAreas = '"lay lay lay" "image split desc"';
+    md.style.gridTemplateColumns = `minmax(0,${p}fr) 14px minmax(0,${q}fr)`;
+    md.style.gridTemplateRows = 'auto minmax(0,1fr)';
+  } else {
+    md.style.gridTemplateAreas = '"lay" "image" "split" "desc"';
+    md.style.gridTemplateColumns = 'minmax(0,1fr)';
+    md.style.gridTemplateRows = `auto minmax(60px,${p}fr) 14px minmax(140px,${q}fr)`;
+  }
+  sp.setAttribute('aria-orientation', L.m === 'h' ? 'vertical' : 'horizontal');
+}
+function editLaySet(p) {
+  const it = selItem(); if (!it) return; const L = itemLay(it);
+  it.lay = { m: L.m, p: clamp(Math.round(p * 100) / 100, LAY_MIN, LAY_MAX) };
+  const r = $('#eLayP'), v = $('#eLayV'); if (r) { r.value = Math.round(it.lay.p * 100); v.textContent = r.value + '%'; }
+  editMediaGrid(); markDirty();
+}
+function initEditSplit() {
+  const sp = $('#eSplit'); let st = null;
+  sp.addEventListener('pointerdown', e => {
+    if (isPortrait()) return;
+    const a = $('#eImg').getBoundingClientRect(), b = document.querySelector('#pEdit .desc-edit').getBoundingClientRect();
+    st = { left: a.left, top: a.top, right: b.right, bottom: b.bottom };
+    sp.setPointerCapture(e.pointerId); sp.classList.add('dragging'); e.preventDefault();
+  });
+  sp.addEventListener('pointermove', e => {
+    if (!st) return; const it = selItem(); if (!it) return;
+    const L = itemLay(it);
+    editLaySet(L.m === 'h' ? (e.clientX - st.left) / Math.max(1, st.right - st.left) : (e.clientY - st.top) / Math.max(1, st.bottom - st.top));
+  });
+  const end = () => { if (!st) return; st = null; sp.classList.remove('dragging'); };
+  sp.addEventListener('pointerup', end); sp.addEventListener('pointercancel', end);
+  sp.addEventListener('keydown', e => {
+    const it = selItem(); if (!it) return; const L = itemLay(it);
+    const d = (L.m === 'h' ? { ArrowLeft: -.02, ArrowRight: .02 } : { ArrowUp: -.02, ArrowDown: .02 })[e.key]; if (!d) return;
+    e.preventDefault(); editLaySet(L.p + d);
+  });
+  addEventListener('resize', editMediaGrid);
+}
+
+/* ================= edit page: live layout preview (computer / phone simulation) (v3.9) ================= */
+const PV_SIZES = {
+  pc: [['1366x768', '筆電 1366×768'], ['1920x1080', '桌機 1920×1080'], ['1280x800', '平板橫向 1280×800'], ['1180x820', 'iPad 橫向 1180×820']],
+  phone: [['390x844', 'iPhone 390×844'], ['430x932', '大 iPhone 430×932'], ['375x667', '小 iPhone 375×667'], ['360x800', 'Android 360×800']],
+};
+const PV = { open: false, mode: null, size: { pc: null, phone: null }, tmpOrder: null, t: 0, el: null, frame: null, doc: null, pos: null };
+const pvDeviceMode = () => (isPortrait() ? 'phone' : 'pc');
+function pvSize() {
+  const m = PV.mode, own = pvDeviceMode() === m;
+  const k = PV.size[m] || (own ? 'own' : PV_SIZES[m][0][0]);
+  if (k === 'own') return { k, w: innerWidth, h: innerHeight };
+  const [w, h] = k.split('x').map(Number); return { k, w, h };
+}
+function pvOpen(mode) {
+  if (!E.draft) return;
+  if (mode) PV.mode = mode; if (!PV.mode) PV.mode = pvDeviceMode();
+  PV.open = true;
+  if (!PV.el) pvBuild();
+  PV.el.hidden = false; $('#pEdit').classList.add('pv-open');
+  pvHead(); pvRefresh(true); pvBtn();
+}
+function pvBtn() { const b = document.querySelector('[data-act=pvToggle]'); if (b) { b.textContent = pvBtnText(); b.setAttribute('aria-pressed', PV.open); } }
+function pvClose() { PV.open = false; if (PV.el) PV.el.hidden = true; const pe = $('#pEdit'); pe && pe.classList.remove('pv-open'); pvBtn(); }
+function pvPageChanged(p) { if (!PV.el) return; const on = p === 'edit' && PV.open; PV.el.hidden = !on; $('#pEdit').classList.toggle('pv-open', on); if (on) pvRefresh(true); }
+
+function pvBuild() {
+  const el = document.createElement('div'); el.className = 'pv'; el.hidden = true; el.setAttribute('role', 'region'); el.setAttribute('aria-label', '版面預覽');
+  el.innerHTML = `<div class="pv-head"><b class="pv-t">模擬畫面</b><span class="seg pv-mode" role="group" aria-label="預覽裝置"><button type="button" data-pv="pc">電腦／橫向</button><button type="button" data-pv="phone">手機直向</button></span>
+      <select class="pv-size" aria-label="模擬的螢幕大小"></select><span class="pv-nav"><button type="button" data-pvi="-1" aria-label="上一個計時器">‹</button><span class="pv-n num"></span><button type="button" data-pvi="1" aria-label="下一個計時器">›</button></span>
+      <button type="button" class="pv-max" data-pvm aria-label="放大或縮小預覽" title="放大／縮小">⤢</button><button type="button" class="pv-x" data-pvx aria-label="關閉預覽">×</button></div>
+    <div class="pv-ctl"></div>
+    <div class="pv-body"><div class="pv-scale"><iframe class="pv-frame" title="模擬畫面" tabindex="-1"></iframe></div></div>`;
+  document.body.append(el); PV.el = el; PV.frame = el.querySelector('iframe');
+  el.addEventListener('click', e => {
+    const m = e.target.closest('[data-pv]'); if (m) { PV.mode = m.dataset.pv; pvHead(); pvRefresh(true); return; }
+    const n = e.target.closest('[data-pvi]'); if (n) { const k = clamp(E.sel + +n.dataset.pvi, 0, E.draft.items.length - 1); if (k !== E.sel) { E.sel = k; renderEdit(); } return; }
+    if (e.target.closest('[data-pvx]')) { pvClose(); return; }
+    if (e.target.closest('[data-pvm]')) { el.classList.toggle('max'); setTimeout(pvFit, 30); return; }
+    const c = e.target.closest('[data-pvc]'); if (c) pvCtl(c.dataset.pvc, c);
+  });
+  el.querySelector('.pv-size').addEventListener('change', e => { PV.size[PV.mode] = e.target.value; pvRefresh(true); });
+  el.addEventListener('input', e => {
+    if (e.target.id !== 'pvP') return; const it = selItem(); if (!it) return;
+    it.lay = { m: itemLay(it).m, p: clamp(+e.target.value / 100, LAY_MIN, LAY_MAX) }; el.querySelector('#pvPV').textContent = e.target.value + '%';
+    markDirty(); renderLayRow();
+  });
+  // move the floating window by its title bar (computer only)
+  const head = el.querySelector('.pv-head'); let mv = null;
+  head.addEventListener('pointerdown', e => { if (isPortrait() || e.target.closest('button,select')) return; const r = el.getBoundingClientRect(); mv = { dx: e.clientX - r.left, dy: e.clientY - r.top }; head.setPointerCapture(e.pointerId); });
+  head.addEventListener('pointermove', e => { if (!mv) return; const x = clamp(e.clientX - mv.dx, 0, innerWidth - 120), y = clamp(e.clientY - mv.dy, 0, innerHeight - 60); el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.right = el.style.bottom = 'auto'; });
+  const up = () => { mv = null; }; head.addEventListener('pointerup', up); head.addEventListener('pointercancel', up);
+  new ResizeObserver(() => pvFit()).observe(el.querySelector('.pv-body'));
+  addEventListener('resize', () => { if (PV.open) { pvHead(); pvRefresh(true); } });
+}
+function pvHead() {
+  const el = PV.el; if (!el) return;
+  for (const b of el.querySelectorAll('[data-pv]')) b.setAttribute('aria-pressed', b.dataset.pv === PV.mode);
+  const own = pvDeviceMode() === PV.mode, cur = pvSize().k;
+  el.querySelector('.pv-size').innerHTML = (own ? `<option value="own">這台裝置 ${innerWidth}×${innerHeight}</option>` : '') + PV_SIZES[PV.mode].map(([k, n]) => `<option value="${k}">${n}</option>`).join('');
+  el.querySelector('.pv-size').value = cur;
+  el.classList.toggle('other', !own); // simulating the other kind of device
+}
+function pvCtlHTML(it) {
+  if (PV.mode === 'pc') {
+    const L = itemLay(it), pc = Math.round(L.p * 100);
+    return `<span class="seg"><button type="button" data-pvc="m" data-m="v" aria-pressed="${L.m === 'v'}">上下</button><button type="button" data-pvc="m" data-m="h" aria-pressed="${L.m === 'h'}">左右</button></span>
+      <label class="lay-p"><span>圖片</span><input type="range" id="pvP" min="${LAY_MIN * 100}" max="${LAY_MAX * 100}" value="${pc}"><b class="num" id="pvPV">${pc}%</b></label>
+      <button type="button" class="chip" data-pvc="all">套用到全部</button><span class="pv-tip">也可以直接拖曳畫面中的分隔條</span>`;
+  }
+  return `<button type="button" class="chip" data-pvc="order">調整區塊順序…</button><span class="pv-tip">順序是整個模組共用；可以在畫面裡上下捲動</span>`;
+}
+async function pvCtl(k, c) {
+  const it = selItem(); if (!it) return;
+  if (k === 'm') { it.lay = { m: c.dataset.m, p: itemLay(it).p }; markDirty(); renderLayRow(); pvRefresh(true); }
+  if (k === 'all') ACT.eLayAll();
+  if (k === 'order') ACT.eOrder();
+}
+
+/* ---------- render the simulated screen inside the iframe ---------- */
+function pvCSS() { return [...document.querySelectorAll('style')].map(s => s.textContent).join('\n') + '\n*{box-sizing:border-box}body{margin:0}button,a,input{pointer-events:none}.splitter{pointer-events:auto}.splitter,.splitter *{cursor:inherit}.pv-hint{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);background:rgba(22,25,29,.75);color:#fff;font-size:13px;padding:4px 12px;border-radius:12px;pointer-events:none}'; }
+function pvRefresh(now) {
+  if (!PV.open || !PV.el || page !== 'edit') return;
+  clearTimeout(PV.t);
+  if (!now) { PV.t = setTimeout(() => pvRefresh(true), 160); return; }
+  const it = selItem(); if (!it) return;
+  const { w, h } = pvSize();
+  const fr = PV.frame; fr.style.width = w + 'px'; fr.style.height = h + 'px';
+  let doc = fr.contentDocument;
+  if (!PV.doc || PV.doc !== doc || !doc.getElementById('pvApp') || PV.css !== 1) {
+    doc.open(); doc.write(`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><style>${pvCSS()}</style></head><body><div class="app" id="pvApp"></div></body></html>`); doc.close();
+    PV.doc = doc; PV.css = 1; pvBindFrame(doc);
+  }
+  doc.getElementById('pvApp').innerHTML = pvScreenHTML(it);
+  const n = PV.el.querySelector('.pv-n'); n.textContent = `${E.sel + 1} / ${E.draft.items.length}`;
+  PV.el.querySelector('.pv-ctl').innerHTML = pvCtlHTML(it);
+  pvLayoutFrame(it);
+  const want = it.imageId; if (want) mediaURL(want).then(u => { const b = doc.getElementById('pvImg'); if (b && u && selItem() === it) b.innerHTML = `<img src="${u}" alt="">`; });
+  pvFit();
+}
+function pvLayoutFrame(it) {
+  const doc = PV.doc, main = doc.getElementById('pvMain'); if (!main) return;
+  const { h } = pvSize();
+  if (PV.mode === 'phone') {
+    orderGrid(main, PV.tmpOrder || E.draft.porder);
+    doc.getElementById('pvImgWrap').style.height = Math.round(clamp(S.settings.splitP || .38, .18, .75) * h) + 'px';
+  } else stageGrid(doc.querySelector('.stage'), itemLay(it));
+}
+function pvScreenHTML(it) {
+  const t = E.draft, items = t.items;
+  const time = it.mode === 'down' ? fmt(Math.max(1, Math.round(it.sec * (t.ratio || 1)))) : '00:00:00';
+  const cnt = it.mode === 'down' ? '—' : Math.max(1, Math.round((it.count || 0) * (t.ratio || 1))) + '次';
+  const desc = it.descHtml ? cleanHTML(it.descHtml) : esc(it.desc || '');
+  const img = `<div class="image-wrap" id="pvImgWrap"><div class="image-box" id="pvImg">${it.imageId ? '' : `<div class="placeholder">${I.pose}<span>這個計時器還沒有圖片</span></div>`}</div></div>`;
+  const pills = items.map((x, i) => `<button class="item-pill ${i === E.sel ? 'current' : ''}"><span class="tx cl2">${i + 1}.${esc(x.title || '未命名')}</span></button>`).join('');
+  const groups = S.groups.slice(0, 5).map(g => { const tt = S.timers[g.timerIds[g.cur || 0]]; return `<div class="group"><div class="group-top"><span class="group-name"><span class="tx cl2">${esc(g.name)}</span></span></div><div class="carousel"><div class="timer-pill ${tt && tt.id === t.id ? 'current' : ''}"><span class="tx cl2">${esc(tt ? tt.name : '')}</span></div></div></div>`; }).join('');
+  const collapsed = PV.mode === 'pc' && S.settings.leftCollapsed ? ' left-collapsed' : '';
+  const hint = PV.mode === 'pc' ? `<div class="pv-hint">${itemLay(it).m === 'h' ? '左右' : '上下'}拖曳分隔條調整比例</div>` : '';
+  return `<div class="page main${collapsed}" id="pvMain">
+    <div class="topbar"><span class="icon-btn">${I.menu}</span><div class="tname">${esc(t.name || '')}</div><span class="icon-btn keys-t">${LI.order}</span><span class="icon-btn keys-t">${I.search}</span><span class="icon-btn gear-t">${I.gear}</span></div>
+    <aside class="groups"><div class="groups-head"><span class="gear">${I.gear}</span></div><div class="group-list">${groups}</div></aside>
+    <nav class="items"><span class="flower up">${I.flower}</span><div class="item-list">${pills}</div><span class="flower down">${I.flower}</span></nav>
+    <section class="stage">
+      <div class="stage-head"><div class="title-pill">${esc(it.title || '未命名')}</div><div class="timebox ${it.mode === 'up' ? 'up' : ''}"><div class="time-pill num">${time}</div><div class="count-pill num">${cnt}</div></div></div>
+      ${img}
+      <div class="splitter" id="pvSplit"><span></span></div>
+      <div class="desc"><div class="desc-h">說明</div><div class="desc-body rich">${desc}</div></div>
+    </section>
+    <div class="controls"><span class="ctl">${I.reset}</span><span class="ctl play">${I.play}</span></div>
+  </div>${hint}`;
+}
+function pvFit() {
+  if (!PV.el || !PV.open) return;
+  const body = PV.el.querySelector('.pv-body'), box = PV.el.querySelector('.pv-scale');
+  const { w, h } = pvSize(); const bw = body.clientWidth - 16, bh = body.clientHeight - 16; if (bw <= 0 || bh <= 0) return;
+  const k = Math.min(bw / w, bh / h, 1);
+  PV.frame.style.transform = `scale(${k})`;
+  box.style.width = Math.round(w * k) + 'px'; box.style.height = Math.round(h * k) + 'px';
+}
+/* drag the splitter inside the simulated computer screen = change this item's default */
+function pvBindFrame(doc) {
+  let st = null;
+  doc.addEventListener('pointerdown', e => {
+    if (PV.mode !== 'pc' || !e.target.closest('.splitter')) return;
+    const iw = doc.getElementById('pvImgWrap').getBoundingClientRect(), de = doc.querySelector('.desc').getBoundingClientRect();
+    st = { left: iw.left, top: iw.top, right: de.right, bottom: de.bottom };
+    e.target.closest('.splitter').setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  doc.addEventListener('pointermove', e => {
+    if (!st) return; const it = selItem(); if (!it) return; const L = itemLay(it);
+    const p = L.m === 'h' ? (e.clientX - st.left) / Math.max(1, st.right - st.left) : (e.clientY - st.top) / Math.max(1, st.bottom - st.top);
+    it.lay = { m: L.m, p: clamp(Math.round(p * 100) / 100, LAY_MIN, LAY_MAX) }; E.dirty = true;
+    stageGrid(doc.querySelector('.stage'), it.lay);
+    const r = PV.el.querySelector('#pvP'), v = PV.el.querySelector('#pvPV'); if (r) { r.value = Math.round(it.lay.p * 100); v.textContent = r.value + '%'; }
+  });
+  const end = () => { if (!st) return; st = null; renderLayRow(); };
+  doc.addEventListener('pointerup', end); doc.addEventListener('pointercancel', end);
+}
 
 /* ================= boot ================= */
 (async () => {
