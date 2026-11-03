@@ -795,6 +795,34 @@ span.tag{cursor:default}
 .spin.digit2 input{width:52px}
 .spins{gap:3px;flex-wrap:nowrap;justify-content:center}
 @media (max-width:1000px) and (min-width:701px){ .spin input{width:50px;font-size:21px} .spin.digit input{width:34px} }
+/* ================= v3.12 image scales with its box; several sounds per slot ================= */
+.image-box{position:relative}
+.image-box > img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;max-width:none}
+.media .image-box > img{inset:0}
+.slot{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.slot-h{display:flex;align-items:center;gap:6px}
+.slot-n{font-weight:700;min-width:2.5em}
+.slot-h small{color:var(--ink-soft);font-size:11px}
+.slot-add{margin-left:auto;width:26px;height:26px;border-radius:50%;background:var(--white);color:var(--blue);font-size:18px;font-weight:800;line-height:1}
+.slot-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.slot-list li{display:flex;align-items:center;gap:3px}
+.slot-list select{flex:1;min-width:0;border:0;border-radius:12px;padding:7px 8px;font-size:15px;background:var(--white);color:var(--ink)}
+.slot-i{width:14px;font-size:11px;color:var(--ink-soft);text-align:center}
+.slot-list button{width:24px;height:28px;border-radius:8px;background:rgba(255,255,255,.6);color:var(--ink-soft);font-size:11px;flex:none}
+.slot-list button:disabled{opacity:.3}
+.ss-h{margin:12px 0 6px!important;font-size:14px!important}
+.ss-h small{font-weight:400;font-size:11px}
+.ss-row{display:flex;gap:6px;align-items:flex-start;margin-bottom:6px}
+.ss-n{font-weight:700;font-size:13px;min-width:2.4em;padding-top:5px}
+.ss-chips{display:flex;flex-wrap:wrap;gap:4px}
+.ss-chip{font-size:12px;background:rgba(255,255,255,.6);border-radius:12px;padding:5px 9px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ss-chip[aria-pressed="true"]{background:var(--pink);font-weight:700}
+.ss-chip.off{color:var(--ink-soft)}
+.ss-chip:disabled{opacity:.4;text-decoration:line-through}
+.slot{width:100%;align-self:stretch;min-width:0}
+.slot-list li{min-width:0}
+.slot-list select{padding:6px 4px;font-size:14px}
+.slot-list button{width:22px}
 </style></head><body>
 <div class="app" id="app"></div>
 <div class="flash" id="flash"></div>
@@ -886,9 +914,23 @@ async function mediaURL(id) {
 }
 
 /* ================= data ================= */
-const BUILTINS = [['vibrate', '內建震動'], ['bowl', '頌缽'], ['ding', '鈴聲'], ['wood', '木魚'], ['beep', '嗶聲'], ['tick', '滴答']];
+// buzz sounds sound like a phone vibrating; on Android "震動模式" turns them into real vibration patterns
+const BUZZ = {
+  buzz1: { n: '震動音・短震', pat: [200], len: .3, pulses: [[0, .2]] },
+  buzz2: { n: '震動音・雙震', pat: [160, 120, 160], len: .5, pulses: [[0, .16], [.28, .16]] },
+  buzz3: { n: '震動音・三連震', pat: [130, 90, 130, 90, 130], len: .6, pulses: [[0, .13], [.22, .13], [.44, .13]] },
+  buzz4: { n: '震動音・長震', pat: [800], len: .9, pulses: [[0, .8]] },
+  buzz5: { n: '震動音・心跳', pat: [110, 90, 220], len: .5, pulses: [[0, .11], [.2, .22]] },
+  buzz6: { n: '震動音・漸強', pat: [120, 110, 180, 110, 260], len: .8, pulses: [[0, .12, .06], [.23, .18, .11], [.52, .26, .18]] },
+  buzz7: { n: '震動音・低沉', pat: [600], len: .7, pulses: [[0, .6, .2, 110]] },
+  buzz8: { n: '震動音・輕點', pat: [45, 70, 45], len: .25, pulses: [[0, .05, .14, 230], [.12, .05, .14, 230]] },
+  buzz9: { n: '震動音・波浪', pat: [100, 80, 100, 80, 100, 80, 100, 80, 100], len: .95, pulses: [[0, .1], [.18, .1], [.36, .1], [.54, .1], [.72, .1]] },
+};
+const BUILTINS = [['vibrate', '內建震動'], ['bowl', '頌缽'], ['ding', '鈴聲'], ['wood', '木魚'], ['beep', '嗶聲'], ['tick', '滴答'], ...Object.entries(BUZZ).map(([k, v]) => [k, v.n])];
 const SYNTH_PERIOD = { vibrate: 5, bowl: 10, ding: 5, wood: 2, beep: 1, tick: 1 };
+for (const k in BUZZ) SYNTH_PERIOD[k] = k === 'buzz4' || k === 'buzz9' ? 3 : 2;
 const SYNTH_LEN = { vibrate: .7, bowl: 3.5, ding: 1.3, wood: .45, beep: .5, tick: .3 };
+for (const k in BUZZ) SYNTH_LEN[k] = BUZZ[k].len;
 const defaultSounds = () => BUILTINS.map(([id, name]) => ({ id, name, kind: 'builtin', loop: true, plays: 1 }));
 const DEFAULT_SETTINGS = { soundMode: 'normal', fadeIn: 5, fadeOut: 5, longPress: 5, back: { side: 'left', y: 0.86 }, leftCollapsed: false, wakeRemind: true };
 function newItem(n) {
@@ -980,7 +1022,7 @@ function synth(id, vol = 1, delay0 = 0) {
     case 'wood': note(520, .16, 'triangle', .42); note(790, .09, 'sine', .14); break;
     case 'beep': note(1000, .14, 'square', .1); note(1000, .14, 'square', .1, .22); break;
     case 'tick': note(1800, .035, 'square', .07); break;
-    case 'buzz': for (const d of [0, .26, .52]) { note(170, .17, 'sawtooth', .16, d); note(340, .12, 'triangle', .05, d); } break; // sounds like a phone vibrating
+    default: { const z = BUZZ[id === 'buzz' ? 'buzz3' : id]; if (z) for (const [d0, d, g = .16, f = 170] of z.pulses) { note(f, d, 'sawtooth', g, d0); note(f * 2, d * .8, 'triangle', g * .3, d0); } }
   }
 }
 const bufCache = new Map();
@@ -998,7 +1040,7 @@ function getBuffer(mediaId) {
 function preloadTimer(t) {
   if (!t) return;
   const ids = new Set([t.globalSound]);
-  for (const it of t.items) Object.values(it.sounds).forEach(x => ids.add(x));
+  for (const it of t.items) for (const k of ['start', 'during', 'end']) slotList(it, k).forEach(x => ids.add(x));
   for (const id of ids) { const s = sndById(id); if (s && s.kind === 'file') getBuffer(s.mediaId); }
 }
 function flash() { const f = $('#flash'); if (!f) return; f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
@@ -1031,11 +1073,18 @@ function stopEvents() { evSources.gen = (evSources.gen || 0) + 1; evSources.spli
 const pvSources = [];
 function stopPv() { pvSources.gen = (pvSources.gen || 0) + 1; pvSources.splice(0).forEach(s => { try { s.stop(); } catch {} }); }
 /* one-shot cue for item start / end */
+/* 震動模式: Android vibrates (a 震動音 picks its pattern); iPhone/iPad/computer flash, and play a 震動音 if one is chosen */
+function vibCue(s) {
+  const z = s && BUZZ[s.id];
+  if (isAndroid && navigator.vibrate) { try { navigator.vibrate(z ? z.pat : [220, 120, 220]); return; } catch {} }
+  haptic();
+  if (isIOS) { const id = z ? s.id : S.settings.iosBuzz ? (BUZZ[S.settings.iosBuzzId] ? S.settings.iosBuzzId : 'buzz3') : null; if (id) synth(id, .6); }
+}
 function cue(id) {
   const s = sndById(id); if (!s) return;
   const m = S.settings.soundMode;
   if (m === 'mute') { flash(); return; }
-  if (m === 'vibrate') { haptic(); if (isIOS && S.settings.iosBuzz) synth('buzz', .55); return; }
+  if (m === 'vibrate') { vibCue(s); return; }
   playTimes(s, s.plays);
 }
 /* continuous channels: 'during' (per item) and 'global' (whole timer) */
@@ -1095,7 +1144,7 @@ const R = { idx: 0, elapsed: 0, gElapsed: 0, running: false, last: 0, finished: 
 function resetRun() { R.running = false; R.idx = 0; R.elapsed = 0; R.gElapsed = 0; R.finished = false; R.lastSec = -1; R.lastGSec = -1; stopAllSound(); releaseAwake(); }
 function enterItem() {
   const t = curTimer(); const it = t && t.items[R.idx]; if (!it) return;
-  cue(it.sounds.start); startCh('during', it.sounds.during);
+  cue(slotSnd(it, 'start')); startCh('during', slotSnd(it, 'during'));
 }
 function loop() {
   const now = performance.now();
@@ -1108,7 +1157,7 @@ function step() {
   if (it.mode === 'down') {
     const dur = scaledSec(it, t) * 1000;
     if (R.elapsed >= dur) {
-      stopCh('during'); cue(it.sounds.end);
+      stopCh('during'); cue(slotSnd(it, 'end'));
       if (R.idx < t.items.length - 1) {
         R.idx++; R.elapsed = 0; R.lastSec = -1; enterItem(); renderItems(); renderStage();
       } else {
@@ -1130,8 +1179,8 @@ function play() {
   preloadTimer(t);
   R.running = true; R.last = performance.now();
   const it = t.items[R.idx];
-  if (R.elapsed === 0) cue(it.sounds.start);
-  startCh('during', it.sounds.during); startCh('global', t.globalSound);
+  if (R.elapsed === 0) cue(slotSnd(it, 'start'));
+  startCh('during', slotSnd(it, 'during')); startCh('global', t.globalSound);
   keepAwake(); renderControls();
 }
 function pause() { R.running = false; stopAllSound(); releaseAwake(); renderControls(); }
@@ -1316,7 +1365,7 @@ function buildShell() {
     <div class="kv" id="rKv"></div>
   </div>
   <div class="fpanel note" id="fp-note" hidden></div>
-  <div class="fpanel" id="fp-sound" hidden><h3>音效模式</h3><div id="modeList" role="radiogroup" aria-label="音效模式"></div></div>
+  <div class="fpanel" id="fp-sound" hidden><h3>音效模式</h3><div id="modeList" role="radiogroup" aria-label="音效模式"></div><div id="slotSwitch"></div></div>
   <div class="fpanel sw" id="fp-sw" hidden>
     <h3>碼表</h3>
     <div class="sw-total num" id="swTotal">00:00:00.0</div>
@@ -1436,8 +1485,9 @@ function renderDrawers() {
       (up ? `<span>次數</span><b class="num">${co} → ${cc}</b><span class="note">另有 ${up} 個正數計時項目，不計入長度</span>` : '');
   }
   const modes = [['normal', '一般模式', '播放設定的音效'], ['fade', '漸進模式', `過程音效前 ${S.settings.fadeIn} 秒淡入、後 ${S.settings.fadeOut} 秒淡出`],
-    ['vibrate', '震動模式', isIOS ? `iPhone／iPad 網頁無法在計時中震動，改用畫面閃爍${S.settings.iosBuzz ? '＋輕聲震動音' : ''}（可在設定調整）` : isAndroid ? '用手機震動提示' : '用畫面閃爍提示'], ['mute', '靜音模式', '只有畫面閃爍']];
+    ['vibrate', '震動模式', isIOS ? 'iPhone／iPad 網頁無法在計時中震動，改用畫面閃爍＋計時器選的震動音（可在設定調整）' : isAndroid ? '用手機震動提示；選了「震動音」的會用那種震動節奏' : '用畫面閃爍提示'], ['mute', '靜音模式', '只有畫面閃爍']];
   $('#modeList').innerHTML = modes.map(([k, n, d]) => `<button class="mode-opt" role="radio" aria-checked="${S.settings.soundMode === k}" data-act="mode" data-m="${k}"><span class="box"></span><span>${n}<small>${d}</small></span></button>`).join('');
+  renderSlotSwitch();
 }
 /* ---------- floating drawers (time ratio, sound mode, stopwatch) ---------- */
 const TAB_DEFAULTS = { note: { x: 1, y: .99 }, ratio: { x: 1, y: .26 }, sound: { x: 1, y: .5 }, sw: { x: 1, y: .74 } };
@@ -1556,7 +1606,7 @@ function curLay() {
   if (!it) return Object.assign(itemLay(null), { id: null, dflt: true });
   return Object.assign(itemLay(it), LAY[it.id] || {}, { id: it.id, dflt: !LAY[it.id] });
 }
-function resetTempLayout() { for (const k of Object.keys(LAY)) delete LAY[k]; PORD = null; }
+function resetTempLayout() { for (const k of Object.keys(LAY)) delete LAY[k]; PORD = null; for (const k of Object.keys(RSND)) delete RSND[k]; }
 function applySplit() {
   const stage = document.querySelector('.stage'), iw = $('#imgWrap'), sp = $('#split'); if (!stage) return;
   applyOrder();
@@ -1791,9 +1841,7 @@ function renderEditForm() {
     <div class="modes"><button type="button" class="mode-c" data-act="setMode" data-m="down" aria-pressed="${it.mode === 'down'}">倒數計時</button><button type="button" class="mode-c" data-act="setMode" data-m="up" aria-pressed="${it.mode === 'up'}">計時器</button></div>
     <div class="spins">${spins}</div>
     <div class="sound-h">音效</div>
-    <div class="srow"><label for="sStart">起始</label><select id="sStart" data-snd="start">${soundOptions(it.sounds.start)}</select></div>
-    <div class="srow"><label for="sDuring">過程</label><select id="sDuring" data-snd="during">${soundOptions(it.sounds.during)}</select></div>
-    <div class="srow"><label for="sEnd">結束</label><select id="sEnd" data-snd="end">${soundOptions(it.sounds.end)}</select></div>
+    ${slotEditorHTML(it)}
   </div>
   <div class="srow"><label for="sGlobal">全域</label><select id="sGlobal" data-snd="global">${soundOptions(E.draft.globalSound)}</select></div>
   <div class="line"><span>不使用全域</span><button type="button" class="toggle" role="switch" aria-checked="${!!it.noGlobal}" data-act="noGlobal" aria-label="不使用全域"></button></div>`;
@@ -1921,8 +1969,9 @@ function generalHTML() {
   <div class="card"><h2>螢幕常亮</h2><p>計時進行中會盡量讓螢幕不自動關閉。裝置不支援時，按下開始會提醒你調整系統設定。</p>
     <div class="line"><span>無法保持亮螢時提醒我</span><button class="toggle" role="switch" aria-checked="${!!st.wakeRemind}" data-act="wakeRemind" aria-label="無法保持亮螢時提醒我"></button></div></div>
   ${isIOS ? `<div class="card"><h2>iPhone／iPad 震動模式</h2><p>Apple 只允許網頁在「剛點過螢幕」的一瞬間產生觸覺回饋，計時進行中（例如時間到）無法震動；iPad 本身沒有震動馬達。所以在這台裝置上，震動模式會改用整個畫面閃爍提示，也可以加上一個小聲、像手機震動的「嗡嗡」聲。</p>
-    <div class="line"><span>加上輕聲震動音</span><button class="toggle" role="switch" aria-checked="${!!st.iosBuzz}" data-act="iosBuzz" aria-label="加上輕聲震動音"></button></div>
-    <div class="line"><span>試試看</span><button class="chip" data-act="iosBuzzTry">播放</button></div></div>` : ''}
+    <p>計時器的起始、結束音效如果選的是「震動音・…」，震動模式會播放那一個；選其他音效時，播放下面的預設震動音（要打開開關）。</p>
+    <div class="line"><span>沒有選震動音時也播放</span><button class="toggle" role="switch" aria-checked="${!!st.iosBuzz}" data-act="iosBuzz" aria-label="沒有選震動音時也播放預設震動音"></button></div>
+    <div class="line"><span>預設震動音</span><select id="iosBuzzId" class="pill-text" style="width:auto">${Object.entries(BUZZ).map(([k, v]) => `<option value="${k}" ${k === (st.iosBuzzId || 'buzz3') ? 'selected' : ''}>${v.n.replace('震動音・', '')}</option>`).join('')}</select><button class="chip" data-act="iosBuzzTry">試聽</button></div></div>` : ''}
   <div class="card"><h2>返回把手</h2><p>綠色的返回把手可以按住拖曳到左右邊緣的任何高度，點一下就返回。</p>
     <div class="line"><span>恢復預設位置</span><button class="chip" data-act="resetBack">恢復</button></div></div>`;
 }
@@ -1970,7 +2019,7 @@ function updatePreviewUI() {
 async function previewPlay() {
   const s = sndById(SV.sel); if (!s) return;
   audio();
-  if (s.kind === 'builtin') { s.id === 'vibrate' ? haptic() : synth(s.id); return; }
+  if (s.kind === 'builtin') { if (s.id === 'vibrate') haptic(); else { synth(s.id); if (BUZZ[s.id] && isAndroid && navigator.vibrate) try { navigator.vibrate(BUZZ[s.id].pat); } catch {} } return; }
   if (prev.id !== s.id) {
     if (!prev.el) { prev.el = new Audio(); prev.el.addEventListener('timeupdate', updatePreviewUI); prev.el.addEventListener('ended', updatePreviewUI); }
     const u = await mediaURL(s.mediaId); if (!u) { toast('找不到這個音檔'); return; }
@@ -2218,12 +2267,12 @@ const GD = {
     if (this.token && Date.now() < this.exp - 60e3) return Promise.resolve('ok');
     if (!this.clientId()) return Promise.resolve('noclient');
     if (!interactive) return Promise.resolve('perm');
-    if (!(window.google && google.accounts && google.accounts.oauth2)) { this.loadGIS().catch(() => {}); return Promise.reject(new SyncErr('perm', 'Google 登入元件載入中，請再按一次')); }
+    if (!(window.google && google.accounts && google.accounts.oauth2)) { this.loadGIS().catch(() => {}); return Promise.reject(new SyncErr('perm', 'Google 登入元件剛載入，請再按一次')); }
     // called synchronously inside the tap so the sign-in popup is allowed
     return new Promise(res => {
       const c = google.accounts.oauth2.initTokenClient({
         client_id: this.clientId(), scope: 'https://www.googleapis.com/auth/drive.appdata',
-        callback: r => { if (r && r.access_token) { this.token = r.access_token; this.exp = Date.now() + (r.expires_in || 3600) * 1000; S.sync.gConnected = true; save(); if (page === 'settings' && SV.view === 'backup') setTimeout(renderSettings, 0); res('ok'); } else res('perm'); },
+        callback: r => { if (r && r.access_token) { this.token = r.access_token; this.exp = Date.now() + (r.expires_in || 3600) * 1000; Store.set('gdTok', { t: this.token, exp: this.exp }); S.sync.gConnected = true; save(); if (page === 'settings' && SV.view === 'backup') setTimeout(renderSettings, 0); res('ok'); } else res('perm'); },
         error_callback: () => res('perm'),
       });
       c.requestAccessToken({ prompt: S.sync.gConnected ? '' : 'consent' });
@@ -2233,7 +2282,7 @@ const GD = {
     let r;
     try { r = await fetch(url, Object.assign({}, opt, { headers: Object.assign({}, opt.headers || {}, { Authorization: 'Bearer ' + this.token }) })); }
     catch { throw new SyncErr('offline', '連不上 Google 雲端硬碟'); }
-    if (r.status === 401) { this.token = null; throw new SyncErr('perm', 'Google 授權已過期'); }
+    if (r.status === 401) { this.token = null; Store.set('gdTok', null); throw new SyncErr('perm', 'Google 授權已過期'); }
     if (!r.ok) throw new SyncErr('error', 'Google 雲端硬碟回應錯誤（' + r.status + '）');
     return r;
   },
@@ -2263,7 +2312,7 @@ const GD = {
   push(text) { return this.upload(SYNC_FILE, new Blob([text], { type: 'application/json' })); },
   putMedia(id, blob) { return this.upload('m_' + id, blob); },
   async getMedia(id, type) { const fid = this.files.get('m_' + id); if (!fid) return null; const b = await (await this.api(`${GD_FILES}/${fid}?alt=media`)).blob(); return type ? new Blob([b], { type }) : b; },
-  disconnect() { try { if (this.token && window.google) google.accounts.oauth2.revoke(this.token, () => {}); } catch {} this.token = null; S.sync.gConnected = false; },
+  disconnect() { try { if (this.token && window.google) google.accounts.oauth2.revoke(this.token, () => {}); } catch {} this.token = null; Store.set('gdTok', null); S.sync.gConnected = false; },
   async label() { return S.sync.gConnected ? '已連結' : ''; },
 };
 const STATUS_TEXT = { idle: '', syncing: '同步中…', ok: '已同步', perm: '需要重新授權才能繼續同步', none: '還沒選擇資料夾', noclient: '還沒設定 Google 用戶端 ID', offline: '目前離線，連上網路後會自動同步', error: '同步失敗' };
@@ -2306,7 +2355,7 @@ const Sync = {
       this.setState(code, e && e.message);
       if (code === 'perm' && !interactive) resumePrompt();
       else if (interactive && code !== 'perm') toast((STATUS_TEXT[code] || '同步失敗') + (e && e.message && e.message !== code ? '：' + e.message : ''));
-      else if (interactive) toast(e.message || STATUS_TEXT.perm);
+      else if (interactive) toast(e.message || STATUS_TEXT.perm, () => Sync.run(true), '再試一次', 12000); // the button is a fresh tap, so the Google sign-in popup is allowed
     } finally {
       this.busy = false;
       if (this.again) { this.again = false; this.schedule(800); }
@@ -2317,6 +2366,7 @@ let resumeShown = 0;
 function resumePrompt() {
   if (Date.now() - resumeShown < 10 * 60e3) return; resumeShown = Date.now();
   const what = S.sync.mode === 'gdrive' ? 'Google 雲端硬碟' : '雲端資料夾';
+  if (S.sync.mode === 'gdrive') GD.loadGIS().catch(() => {}); // must be ready before the tap, or the sign-in popup is blocked
   toast(`${what}需要重新授權`, () => Sync.run(true), '恢復同步', 12000);
 }
 function syncStatusText() {
@@ -2329,7 +2379,7 @@ const fmtTime = ts => ts ? new Date(ts).toLocaleString('zh-TW', { month: 'numeri
 
 /* ================= delete: long-press / swipe / multi-select ================= */
 let SEL = null; // { kind, ctx, keys:Set }
-const APP_VER = '3.11';
+const APP_VER = '3.12';
 let swallowClick = false;
 const KIND_LABEL = { group: '群組', timer: '計時器模組', item: '計時器', sound: '音效' };
 function delName(kind, key) {
@@ -2385,7 +2435,7 @@ function toggleSel(key) {
 }
 function soundUsage(ids) {
   let n = 0;
-  for (const t of Object.values(S.timers)) { if (ids.includes(t.globalSound)) n++; for (const it of t.items) for (const v of Object.values(it.sounds)) if (ids.includes(v)) n++; }
+  for (const t of Object.values(S.timers)) { if (ids.includes(t.globalSound)) n++; for (const it of t.items) for (const k of ['start', 'during', 'end']) for (const v of slotList(it, k)) if (ids.includes(v)) n++; }
   return n;
 }
 async function confirmDelete(kind, keys, ctx) {
@@ -2422,7 +2472,7 @@ function doDelete(kind, keys) {
     for (const t of Object.values(S.timers)) {
       let hit = false;
       if (set.has(t.globalSound)) { t.globalSound = 'none'; hit = true; }
-      for (const it of t.items) for (const k of Object.keys(it.sounds)) if (set.has(it.sounds[k])) { it.sounds[k] = 'none'; hit = true; }
+      for (const it of t.items) for (const k of Object.keys(it.sounds)) { const l = slotList(it, k); if (l.some(x => set.has(x))) { setSlot(it, k, l.filter(x => !set.has(x))); hit = true; } }
       if (hit) touch(t);
     }
     S.sounds = S.sounds.filter(s => !set.has(s.id)); keys.forEach(id => tomb('sound', id));
@@ -2523,7 +2573,7 @@ const ACT = {
   swToggle: () => swAct('toggle'), swLap: () => swAct('lap'), swReset: () => swAct('reset'), swClear: () => swAct('clear'), swCopy: () => swCopy(),
   rdown: () => { const t = curTimer(); t && setRatio((t.ratio || 1) - .05); },
   rup: () => { const t = curTimer(); t && setRatio((t.ratio || 1) + .05); },
-  mode: a => { S.settings.soundMode = a.dataset.m; touchPrefs(); save(); renderDrawers(); if (a.dataset.m === 'vibrate') haptic(); if (R.running) { const t = curTimer(); startCh('during', t.items[R.idx].sounds.during); startCh('global', t.globalSound); } else stopAllSound(); },
+  mode: a => { S.settings.soundMode = a.dataset.m; touchPrefs(); save(); renderDrawers(); if (a.dataset.m === 'vibrate') haptic(); if (R.running) { const t = curTimer(); startCh('during', slotSnd(t.items[R.idx], 'during')); startCh('global', t.globalSound); } else stopAllSound(); },
   save: () => { if (commitEdit()) leaveToMain(false); },
   addItem: () => { stopPv(); exitSelect(); E.draft.items.push(newItem(E.draft.items.length + 1)); E.sel = E.draft.items.length - 1; markDirty(); if (isPortrait()) E.detail = true; renderEdit(); const l = $('#eItems'); l.scrollTop = l.scrollHeight; },
   selItem: a => { stopPv(); E.sel = +a.dataset.i; if (isPortrait()) { E.detail = true; if (useHistory) repush(); } renderEdit(); },
@@ -2543,7 +2593,7 @@ const ACT = {
   sPlays: a => { const s = sndById(SV.sel); s.plays = (((s.plays || 1) - 1 + (+a.dataset.d) + 99) % 99) + 1; touch(s); save(); renderSettings(); },
   setStep: a => { const f = a.dataset.f; const [lo, hi] = f === 'longPress' ? [1, 10] : [1, 30]; S.settings[f] = clamp(S.settings[f] + (+a.dataset.d), lo, hi); touchPrefs(); save(); renderSettings(); },
   iosBuzz: () => { S.settings.iosBuzz = !S.settings.iosBuzz; save(); renderSettings(); },
-  iosBuzzTry: () => { audio(); haptic(); if (S.settings.iosBuzz) synth('buzz', .55); },
+  iosBuzzTry: () => { audio(); haptic(); synth(BUZZ[S.settings.iosBuzzId] ? S.settings.iosBuzzId : 'buzz3', .6); },
   wakeRemind: () => { S.settings.wakeRemind = !S.settings.wakeRemind; wakeWarned = false; save(); renderSettings(); },
   resetBack: () => { S.settings.back = clone(DEFAULT_SETTINGS.back); save(); renderBack(); toast('已恢復預設位置'); },
   restorePre: async () => { const pb = await Store.get('backup-pre-3.2'); if (pb) importData(new Blob([JSON.stringify(pb.snap)], { type: 'application/json' })); },
@@ -2590,7 +2640,7 @@ function bindEvents() {
     if (e.key === 'Escape') { if (SEL) exitSelect(); else if (SORT) exitSort(); else if (openDrawer) closeDrawers(); else if (page !== 'main') goBack(); else closeMenu(); }
   });
   document.addEventListener('pointerdown', e => { if (openDrawer && !e.target.closest('.ftab,.fpanel,.scrim,.toast')) closeDrawers(); }, true);
-  initRichView(); initRichEdit(); initLayout();
+  initRichView(); initRichEdit(); initLayout(); initSlots();
   const ri = $('#ratioInput');
   ri.addEventListener('focus', () => { const t = curTimer(); ri.value = (t ? t.ratio || 1 : 1).toFixed(2); ri.select(); });
   ri.addEventListener('change', () => setRatio(parseFloat(ri.value)));
@@ -4182,6 +4232,86 @@ function pvBindFrame(doc) {
   doc.addEventListener('pointerup', end); doc.addEventListener('pointercancel', end);
 }
 
+/* ================= several start / during / end sounds per timer, in priority order (v3.12) ================= */
+// it.sndList = { start: [ids], during: [ids], end: [ids] }  — first = default; it.sounds[k] mirrors the first one (older versions read it)
+const SLOT_NAMES = { start: '起始', during: '過程', end: '結束' };
+const RSND = {}; // this use only: itemId -> { slot: index (-1 = 無) }
+function slotList(it, k) {
+  const l = it && it.sndList && Array.isArray(it.sndList[k]) ? it.sndList[k].filter(x => x && x !== 'none') : null;
+  if (l && l.length) return l;
+  const one = it && it.sounds && it.sounds[k];
+  return one && one !== 'none' ? [one] : [];
+}
+function setSlot(it, k, list) {
+  list = list.filter(x => x && x !== 'none');
+  it.sndList = Object.assign({}, it.sndList, { [k]: list });
+  it.sounds[k] = list[0] || 'none';
+}
+/* the sound used now: the one picked on the main screen, otherwise the first one in the list that still exists */
+function slotSnd(it, k) {
+  if (!it) return 'none';
+  const l = slotList(it, k), pick = RSND[it.id] && RSND[it.id][k];
+  if (pick === -1) return 'none';
+  if (pick != null && l[pick] && sndById(l[pick])) return l[pick];
+  return l.find(id => sndById(id)) || 'none';
+}
+const slotIdx = (it, k) => { const pick = RSND[it.id] && RSND[it.id][k]; if (pick === -1) return -1; const l = slotList(it, k); if (pick != null && l[pick] && sndById(l[pick])) return pick; return l.findIndex(id => sndById(id)); };
+
+/* ---------- edit page ---------- */
+function slotEditorHTML(it) {
+  return Object.keys(SLOT_NAMES).map(k => {
+    const l = slotList(it, k), rows = l.length ? l : ['none'];
+    return `<div class="slot" data-slot="${k}"><div class="slot-h"><span class="slot-n">${SLOT_NAMES[k]}</span>${l.length > 1 ? `<small>${l.length} 個，第 1 個是預設</small>` : ''}<button type="button" class="slot-add" data-act="slotAdd" data-k="${k}" title="再加一個${SLOT_NAMES[k]}音效（正式使用時可以切換）">＋</button></div>
+      <ol class="slot-list">${rows.map((id, i) => `<li><span class="slot-i num">${l.length > 1 ? i + 1 : ''}</span><select data-sl="${k}" data-i="${i}" aria-label="${SLOT_NAMES[k]}音效 ${i + 1}">${soundOptions(id)}</select>${l.length > 1 ? `<button type="button" data-act="slotMv" data-k="${k}" data-i="${i}" data-d="-1" aria-label="往前" ${i ? '' : 'disabled'}>▲</button><button type="button" data-act="slotMv" data-k="${k}" data-i="${i}" data-d="1" aria-label="往後" ${i < l.length - 1 ? '' : 'disabled'}>▼</button><button type="button" data-act="slotDel" data-k="${k}" data-i="${i}" aria-label="移除">×</button>` : ''}</li>`).join('')}</ol></div>`;
+  }).join('');
+}
+function initSlots() {
+  $('#pEdit').addEventListener('change', e => {
+    const t = e.target; if (!t.dataset.sl) return;
+    const it = selItem(); if (!it) return;
+    const k = t.dataset.sl, i = +t.dataset.i, l = slotList(it, k).slice();
+    if (t.value === 'none') l.splice(i, 1); else l[i] = t.value;
+    setSlot(it, k, l); markDirty(); renderEditForm();
+    audio(); stopPv(); const s = sndById(t.value); if (s) playTimes(s, 1, 1, pvSources);
+  });
+  $('#pEdit').addEventListener('focusout', e => { if (e.target.matches('select[data-sl]')) stopPv(); });
+  $('#pSet').addEventListener('change', e => { if (e.target.id === 'iosBuzzId') { S.settings.iosBuzzId = e.target.value; save(); audio(); synth(e.target.value, .6); } });
+}
+Object.assign(ACT, {
+  slotAdd: a => {
+    const it = selItem(); if (!it) return; const k = a.dataset.k, l = slotList(it, k).slice();
+    const first = S.sounds.find(s => !l.includes(s.id) && s.id !== 'vibrate') || S.sounds[0];
+    l.push(first.id); setSlot(it, k, l); markDirty(); renderEditForm();
+    const sel = document.querySelector(`#eForm select[data-sl="${k}"][data-i="${l.length - 1}"]`); sel && sel.focus();
+  },
+  slotMv: a => { const it = selItem(); const k = a.dataset.k, i = +a.dataset.i, j = i + +a.dataset.d, l = slotList(it, k).slice(); if (!l[j]) return; [l[i], l[j]] = [l[j], l[i]]; setSlot(it, k, l); markDirty(); renderEditForm(); },
+  slotDel: a => { const it = selItem(); const k = a.dataset.k, l = slotList(it, k).slice(); l.splice(+a.dataset.i, 1); setSlot(it, k, l); markDirty(); renderEditForm(); },
+  // main screen: switch right now (before or while timing)
+  slotPick: a => {
+    const t = curTimer(), it = t && t.items[R.idx]; if (!it) return;
+    const k = a.dataset.k, i = +a.dataset.i;
+    RSND[it.id] = Object.assign({}, RSND[it.id], { [k]: i });
+    const id = slotSnd(it, k);
+    if (k === 'during') { if (R.running) startCh('during', id); }
+    else { audio(); stopPv(); const s = sndById(id); if (s && !R.running) playTimes(s, 1, 1, pvSources); }
+    renderSlotSwitch();
+  },
+});
+
+/* ---------- main screen: in the 音效模式 drawer ---------- */
+function renderSlotSwitch() {
+  const box = $('#slotSwitch'); if (!box) return;
+  const t = curTimer(), it = t && t.items[R.idx];
+  if (!it) { box.innerHTML = ''; return; }
+  const rows = Object.keys(SLOT_NAMES).map(k => {
+    const l = slotList(it, k); if (!l.length) return '';
+    const cur = slotIdx(it, k);
+    const chips = l.map((id, i) => { const s = sndById(id); return `<button type="button" class="ss-chip" data-act="slotPick" data-k="${k}" data-i="${i}" aria-pressed="${cur === i}" ${s ? '' : 'disabled'} title="${s ? esc(s.name) : '找不到這個音效'}">${s ? esc(s.name) : '（已刪除）'}</button>`; }).join('');
+    return `<div class="ss-row"><span class="ss-n">${SLOT_NAMES[k]}</span><span class="ss-chips">${chips}<button type="button" class="ss-chip off" data-act="slotPick" data-k="${k}" data-i="-1" aria-pressed="${cur === -1}">無</button></span></div>`;
+  }).join('');
+  box.innerHTML = rows ? `<h3 class="ss-h">這個計時器的音效 <small>（點一下馬上換，只影響這次）</small></h3>${rows}` : '';
+}
+
 /* ================= boot ================= */
 (async () => {
   await Store.open();
@@ -4200,6 +4330,7 @@ function pvBindFrame(doc) {
   showPage('main'); renderMain();
   setInterval(loop, 100);
   setTimeout(cleanMedia, 3000);
+  if (S.sync.mode === 'gdrive') { try { const tk = await Store.get('gdTok'); if (tk && tk.t && tk.exp > Date.now() + 60e3) { GD.token = tk.t; GD.exp = tk.exp; } } catch {} if (GD.clientId()) GD.loadGIS().catch(() => {}); }
   if (S.sync.mode !== 'off') setTimeout(() => Sync.run(false), 1200);
   setTimeout(checkRemind, 4000); setInterval(checkRemind, 3600e3);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { Sync.schedule(600); checkRemind(); } });
