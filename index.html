@@ -147,8 +147,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
 /* flash overlay */
 .flash{position:fixed;inset:0;background:var(--pink);pointer-events:none;opacity:0;z-index:90}
-.flash.on{animation:flash 1.2s ease-out}
-@keyframes flash{0%,30%,60%{opacity:.85}15%,45%,100%{opacity:0}}
+.flash.on{animation:flash 1.6s ease-out}
+@keyframes flash{0%,25%,50%,75%{opacity:.9}12%,37%,62%,100%{opacity:0}}
 
 /* ---------- EDIT ---------- */
 .edit{display:grid;height:100%;grid-template-columns:220px 230px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);
@@ -789,6 +789,12 @@ span.tag{cursor:default}
   .edit.detail .media{grid-template-areas:"lay" "image" "desc";grid-template-rows:auto 240px auto;gap:12px}
   .media > .lay-row{margin-bottom:0}
 }
+/* v3.11 time spinners: wider, no browser padding (iPhone/iPad cut off the last digit) */
+.spin input{width:56px;padding:0;margin:0;box-sizing:border-box;font-variant-numeric:tabular-nums;letter-spacing:0;-webkit-appearance:none;appearance:none;text-indent:0;min-width:0}
+.spin.digit input{width:38px}
+.spin.digit2 input{width:52px}
+.spins{gap:3px;flex-wrap:nowrap;justify-content:center}
+@media (max-width:1000px) and (min-width:701px){ .spin input{width:50px;font-size:21px} .spin.digit input{width:34px} }
 </style></head><body>
 <div class="app" id="app"></div>
 <div class="flash" id="flash"></div>
@@ -974,6 +980,7 @@ function synth(id, vol = 1, delay0 = 0) {
     case 'wood': note(520, .16, 'triangle', .42); note(790, .09, 'sine', .14); break;
     case 'beep': note(1000, .14, 'square', .1); note(1000, .14, 'square', .1, .22); break;
     case 'tick': note(1800, .035, 'square', .07); break;
+    case 'buzz': for (const d of [0, .26, .52]) { note(170, .17, 'sawtooth', .16, d); note(340, .12, 'triangle', .05, d); } break; // sounds like a phone vibrating
   }
 }
 const bufCache = new Map();
@@ -997,7 +1004,9 @@ function preloadTimer(t) {
 function flash() { const f = $('#flash'); if (!f) return; f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
 function haptic() {
   if (isAndroid && navigator.vibrate) { try { navigator.vibrate([220, 120, 220]); return; } catch {} }
-  if (isIOS) { const l = $('#hapticLabel'); if (l) { l.click(); setTimeout(() => l.click(), 160); setTimeout(() => l.click(), 320); } return; }
+  // iPhone: Safari only allows the switch haptic right after a tap (about 1 s, iOS 18.4+); iPad has no vibration motor.
+  // So the tap-time haptic is still tried, but a timer cue always flashes the screen (and can play a soft buzz sound).
+  if (isIOS) { const l = $('#hapticLabel'); if (l) { l.click(); setTimeout(() => l.click(), 160); setTimeout(() => l.click(), 320); } }
   flash();
 }
 /* play a sound N times (used for start / end cues and previews) */
@@ -1026,7 +1035,7 @@ function cue(id) {
   const s = sndById(id); if (!s) return;
   const m = S.settings.soundMode;
   if (m === 'mute') { flash(); return; }
-  if (m === 'vibrate') { haptic(); return; }
+  if (m === 'vibrate') { haptic(); if (isIOS && S.settings.iosBuzz) synth('buzz', .55); return; }
   playTimes(s, s.plays);
 }
 /* continuous channels: 'during' (per item) and 'global' (whole timer) */
@@ -1427,7 +1436,7 @@ function renderDrawers() {
       (up ? `<span>次數</span><b class="num">${co} → ${cc}</b><span class="note">另有 ${up} 個正數計時項目，不計入長度</span>` : '');
   }
   const modes = [['normal', '一般模式', '播放設定的音效'], ['fade', '漸進模式', `過程音效前 ${S.settings.fadeIn} 秒淡入、後 ${S.settings.fadeOut} 秒淡出`],
-    ['vibrate', '震動模式', isIOS ? '用觸覺回饋提示' : isAndroid ? '用手機震動提示' : '用畫面閃爍提示'], ['mute', '靜音模式', '只有畫面閃爍']];
+    ['vibrate', '震動模式', isIOS ? `iPhone／iPad 網頁無法在計時中震動，改用畫面閃爍${S.settings.iosBuzz ? '＋輕聲震動音' : ''}（可在設定調整）` : isAndroid ? '用手機震動提示' : '用畫面閃爍提示'], ['mute', '靜音模式', '只有畫面閃爍']];
   $('#modeList').innerHTML = modes.map(([k, n, d]) => `<button class="mode-opt" role="radio" aria-checked="${S.settings.soundMode === k}" data-act="mode" data-m="${k}"><span class="box"></span><span>${n}<small>${d}</small></span></button>`).join('');
 }
 /* ---------- floating drawers (time ratio, sound mode, stopwatch) ---------- */
@@ -1911,6 +1920,9 @@ function generalHTML() {
     <div class="line"><span>滑鼠按住秒數</span>${stepper('longPress', st.longPress)}</div></div>
   <div class="card"><h2>螢幕常亮</h2><p>計時進行中會盡量讓螢幕不自動關閉。裝置不支援時，按下開始會提醒你調整系統設定。</p>
     <div class="line"><span>無法保持亮螢時提醒我</span><button class="toggle" role="switch" aria-checked="${!!st.wakeRemind}" data-act="wakeRemind" aria-label="無法保持亮螢時提醒我"></button></div></div>
+  ${isIOS ? `<div class="card"><h2>iPhone／iPad 震動模式</h2><p>Apple 只允許網頁在「剛點過螢幕」的一瞬間產生觸覺回饋，計時進行中（例如時間到）無法震動；iPad 本身沒有震動馬達。所以在這台裝置上，震動模式會改用整個畫面閃爍提示，也可以加上一個小聲、像手機震動的「嗡嗡」聲。</p>
+    <div class="line"><span>加上輕聲震動音</span><button class="toggle" role="switch" aria-checked="${!!st.iosBuzz}" data-act="iosBuzz" aria-label="加上輕聲震動音"></button></div>
+    <div class="line"><span>試試看</span><button class="chip" data-act="iosBuzzTry">播放</button></div></div>` : ''}
   <div class="card"><h2>返回把手</h2><p>綠色的返回把手可以按住拖曳到左右邊緣的任何高度，點一下就返回。</p>
     <div class="line"><span>恢復預設位置</span><button class="chip" data-act="resetBack">恢復</button></div></div>`;
 }
@@ -2317,7 +2329,7 @@ const fmtTime = ts => ts ? new Date(ts).toLocaleString('zh-TW', { month: 'numeri
 
 /* ================= delete: long-press / swipe / multi-select ================= */
 let SEL = null; // { kind, ctx, keys:Set }
-const APP_VER = '3.10';
+const APP_VER = '3.11';
 let swallowClick = false;
 const KIND_LABEL = { group: '群組', timer: '計時器模組', item: '計時器', sound: '音效' };
 function delName(kind, key) {
@@ -2530,6 +2542,8 @@ const ACT = {
   sLoop: () => { const s = sndById(SV.sel); s.loop = !s.loop; touch(s); save(); renderSettings(); },
   sPlays: a => { const s = sndById(SV.sel); s.plays = (((s.plays || 1) - 1 + (+a.dataset.d) + 99) % 99) + 1; touch(s); save(); renderSettings(); },
   setStep: a => { const f = a.dataset.f; const [lo, hi] = f === 'longPress' ? [1, 10] : [1, 30]; S.settings[f] = clamp(S.settings[f] + (+a.dataset.d), lo, hi); touchPrefs(); save(); renderSettings(); },
+  iosBuzz: () => { S.settings.iosBuzz = !S.settings.iosBuzz; save(); renderSettings(); },
+  iosBuzzTry: () => { audio(); haptic(); if (S.settings.iosBuzz) synth('buzz', .55); },
   wakeRemind: () => { S.settings.wakeRemind = !S.settings.wakeRemind; wakeWarned = false; save(); renderSettings(); },
   resetBack: () => { S.settings.back = clone(DEFAULT_SETTINGS.back); save(); renderBack(); toast('已恢復預設位置'); },
   restorePre: async () => { const pb = await Store.get('backup-pre-3.2'); if (pb) importData(new Blob([JSON.stringify(pb.snap)], { type: 'application/json' })); },
