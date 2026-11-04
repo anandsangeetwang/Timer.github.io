@@ -823,6 +823,27 @@ span.tag{cursor:default}
 .slot-list li{min-width:0}
 .slot-list select{padding:6px 4px;font-size:14px}
 .slot-list button{width:22px}
+/* ================= v3.13 講解準備 / 放鬆休息 ================= */
+.image-wrap{position:relative}
+.phase-tag{position:absolute;left:50%;top:18px;transform:translateX(-50%);z-index:4;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+  max-width:calc(100% - 32px);padding:8px 10px 8px 16px;border-radius:22px;box-shadow:0 4px 16px rgba(0,0,0,.18);background:var(--white);font-size:15px}
+.phase-tag[hidden]{display:none}
+.phase-tag.prep{background:#dbe8fb}
+.phase-tag.rest{background:#d9f0c8}
+.phase-tag.up{padding:4px;background:transparent;box-shadow:none;top:auto;bottom:18px}
+.pt-l{font-weight:800;font-size:17px}
+.pt-s{color:var(--ink-soft);font-size:14px}
+.pt-b{background:var(--white);border-radius:16px;padding:6px 12px;font-weight:700;font-size:14px;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.phase-tag.up .pt-b{background:var(--pink);padding:9px 16px;font-size:15px}
+.timebox.ph-prep .time-pill{background:#9cc0ef}
+.timebox.ph-rest .time-pill{background:#a6d98a}
+.pr-box{display:flex;flex-direction:column;gap:6px;width:100%;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(22,25,29,.18)}
+.pr-row{display:flex;align-items:center;gap:4px}
+.pr-l{flex:1;font-size:14px;font-weight:700;min-width:0}
+.pr-row button{width:28px;height:28px;border-radius:50%;background:var(--white);font-size:16px;flex:none}
+.pr-row input{width:58px;border:0;border-radius:10px;padding:5px 4px;text-align:center;font-size:16px;font-weight:700;background:var(--white);color:var(--ink)}
+.pr-all{align-self:flex-end;font-size:12px}
+@media (max-width:700px){ .phase-tag{top:10px;font-size:14px} .pt-l{font-size:15px} }
 </style></head><body>
 <div class="app" id="app"></div>
 <div class="flash" id="flash"></div>
@@ -935,7 +956,7 @@ const defaultSounds = () => BUILTINS.map(([id, name]) => ({ id, name, kind: 'bui
 const DEFAULT_SETTINGS = { soundMode: 'normal', fadeIn: 5, fadeOut: 5, longPress: 5, back: { side: 'left', y: 0.86 }, leftCollapsed: false, wakeRemind: true };
 function newItem(n) {
   return { id: uid(), title: '計時標題 ' + n, mode: 'down', sec: 60, count: 10, desc: '', imageId: null,
-    sounds: { start: 'ding', during: 'none', end: 'bowl' }, noGlobal: false };
+    sounds: { start: 'ding', during: 'none', end: 'bowl' }, noGlobal: false, prep: 0, rest: 0 };
 }
 function seed() {
   const mk = (title, mode, sec, count, desc, snd) => Object.assign(newItem(1), { title, mode, sec, count, desc, sounds: Object.assign({ start: 'ding', during: 'none', end: 'bowl' }, snd || {}) });
@@ -1140,11 +1161,35 @@ function updateChannels(newSec, newGSec) {
 }
 
 /* ================= timer engine ================= */
-const R = { idx: 0, elapsed: 0, gElapsed: 0, running: false, last: 0, finished: false, lastSec: -1, lastGSec: -1 };
-function resetRun() { R.running = false; R.idx = 0; R.elapsed = 0; R.gElapsed = 0; R.finished = false; R.lastSec = -1; R.lastGSec = -1; stopAllSound(); releaseAwake(); }
+/* each 計時器 (item) runs in up to three phases: prep (講解／準備, it.prep s) → main → rest (放鬆休息, it.rest s) */
+const R = { idx: 0, elapsed: 0, gElapsed: 0, running: false, last: 0, finished: false, lastSec: -1, lastGSec: -1, phase: 'main' };
+const prepSec = it => Math.max(0, Math.round(+(it && it.prep) || 0));
+const restSec = it => Math.max(0, Math.round(+(it && it.rest) || 0));
+const firstPhase = it => (prepSec(it) ? 'prep' : 'main');
+function phaseMs(it, t, ph) {
+  if (ph === 'prep') return prepSec(it) * 1000;
+  if (ph === 'rest') return restSec(it) * 1000;
+  return it.mode === 'down' ? scaledSec(it, t) * 1000 : Infinity;
+}
+function resetRun() {
+  R.running = false; R.idx = 0; R.elapsed = 0; R.gElapsed = 0; R.finished = false; R.lastSec = -1; R.lastGSec = -1;
+  const t = curTimer(); R.phase = firstPhase(t && t.items[0]); stopAllSound(); releaseAwake();
+}
+function enterMain(it) { R.phase = 'main'; R.elapsed = 0; R.lastSec = -1; if (R.running) { cue(slotSnd(it, 'start')); startCh('during', slotSnd(it, 'during')); } }
 function enterItem() {
   const t = curTimer(); const it = t && t.items[R.idx]; if (!it) return;
-  cue(slotSnd(it, 'start')); startCh('during', slotSnd(it, 'during'));
+  R.elapsed = 0; R.lastSec = -1;
+  if (prepSec(it)) R.phase = 'prep'; else enterMain(it);
+}
+function finishRun() { R.running = false; R.finished = true; stopAllSound(); releaseAwake(); flash(); renderControls(); renderStage(); toast('練習完成'); }
+function nextItem() {
+  const t = curTimer();
+  if (R.idx < t.items.length - 1) { R.idx++; enterItem(); renderItems(); renderStage(); } else finishRun();
+}
+/* main part is over (time up, or 完成 pressed): end cue, then rest or the next 計時器 */
+function afterMain(it) {
+  stopCh('during'); if (R.running) cue(slotSnd(it, 'end'));
+  if (restSec(it)) { R.phase = 'rest'; R.elapsed = 0; R.lastSec = -1; renderStage(); } else nextItem();
 }
 function loop() {
   const now = performance.now();
@@ -1154,20 +1199,14 @@ function loop() {
 function step() {
   const t = curTimer(); if (!t || !t.items.length) { R.running = false; return; }
   const it = t.items[R.idx]; if (!it) { R.idx = 0; return; }
-  if (it.mode === 'down') {
-    const dur = scaledSec(it, t) * 1000;
-    if (R.elapsed >= dur) {
-      stopCh('during'); cue(slotSnd(it, 'end'));
-      if (R.idx < t.items.length - 1) {
-        R.idx++; R.elapsed = 0; R.lastSec = -1; enterItem(); renderItems(); renderStage();
-      } else {
-        R.elapsed = dur; R.running = false; R.finished = true; stopCh('global'); releaseAwake(); flash(); renderControls(); toast('練習完成');
-      }
-      return;
-    }
+  if (R.elapsed >= phaseMs(it, t, R.phase)) {
+    if (R.phase === 'prep') { enterMain(it); renderStage(); }
+    else if (R.phase === 'main') afterMain(it);
+    else nextItem();
+    return;
   }
   const sec = Math.floor(R.elapsed / 1000), gsec = Math.floor(R.gElapsed / 1000);
-  const ns = sec !== R.lastSec ? sec : null, ng = gsec !== R.lastGSec ? gsec : null;
+  const ns = sec !== R.lastSec && R.phase === 'main' ? sec : null, ng = gsec !== R.lastGSec ? gsec : null;
   R.lastSec = sec; R.lastGSec = gsec;
   updateChannels(ns, ng);
 }
@@ -1179,20 +1218,32 @@ function play() {
   preloadTimer(t);
   R.running = true; R.last = performance.now();
   const it = t.items[R.idx];
-  if (R.elapsed === 0) cue(slotSnd(it, 'start'));
-  startCh('during', slotSnd(it, 'during')); startCh('global', t.globalSound);
+  if (R.phase === 'main') { if (R.elapsed === 0) cue(slotSnd(it, 'start')); startCh('during', slotSnd(it, 'during')); }
+  startCh('global', t.globalSound);
   keepAwake(); renderControls();
 }
 function pause() { R.running = false; stopAllSound(); releaseAwake(); renderControls(); }
 function selectItem(i) {
   stopCh('during');
-  R.idx = i; R.elapsed = 0; R.lastSec = -1; R.finished = false;
+  const t = curTimer();
+  R.idx = i; R.elapsed = 0; R.lastSec = -1; R.finished = false; R.phase = firstPhase(t && t.items[i]);
   if (R.running) { R.last = performance.now(); enterItem(); }
   renderItems(); renderStage(); renderControls();
+}
+/* 跳過講解 / 完成 / 跳過休息 */
+function phaseSkip() {
+  const t = curTimer(), it = t && t.items[R.idx]; if (!it) return;
+  if (R.finished) return;
+  if (R.phase === 'prep') { enterMain(it); renderStage(); }
+  else if (R.phase === 'main') afterMain(it);
+  else nextItem();
+  renderControls();
 }
 function liveVals() {
   const t = curTimer(); const it = t && t.items[R.idx];
   if (!it) return { time: '00:00:00', count: '—', up: false };
+  if (R.finished) return { time: '00:00:00', count: '—', up: false };
+  if (R.phase !== 'main') return { time: fmt(Math.ceil(phaseMs(it, t, R.phase) / 1000 - R.elapsed / 1000 - 1e-6)), count: '—', up: false };
   if (it.mode === 'down') return { time: fmt(Math.ceil(scaledSec(it, t) - R.elapsed / 1000 - 1e-6)), count: '—', up: false };
   return { time: fmt(R.elapsed / 1000), count: scaledCount(it, t) + '次', up: true };
 }
@@ -1348,7 +1399,7 @@ function buildShell() {
   <section class="stage">
     <div class="stage-head"><div class="title-pill" id="title"></div>
       <div class="timebox" id="timebox"><button class="time-pill num" id="time" data-act="toggle" aria-label="開始或暫停"></button><div class="count-pill num" id="count"></div></div></div>
-    <div class="image-wrap" id="imgWrap"><div class="image-box" id="imgBox"></div></div>
+    <div class="image-wrap" id="imgWrap"><div class="image-box" id="imgBox"></div><div class="phase-tag" id="phaseTag" hidden></div></div>
     <div class="splitter" id="split" role="separator" aria-orientation="horizontal" aria-label="拖曳調整圖片與說明的大小（只影響這次）" tabindex="0"><span></span><div class="sp-btns"><button type="button" class="sp-b" id="splitFlip" data-act="layFlip">⇆</button><button type="button" class="sp-b" id="splitRst" data-act="layReset" title="回到編輯時設定的比例" hidden>↺</button></div></div>
     <div class="desc" id="desc" role="region" aria-labelledby="descH"><div class="desc-h" id="descH">說明<span class="desc-nav" id="descNav" hidden><button type="button" data-act="descPrev" aria-label="上一欄">◀</button><span class="num" id="descPg"></span><button type="button" data-act="descNext" aria-label="下一欄">▶</button></span></div><div class="desc-body rich" id="descText"></div></div>
   </section>
@@ -1474,13 +1525,14 @@ function updateLive() {
   if (te.textContent !== v.time) te.textContent = v.time;
   if (ce.textContent !== v.count) ce.textContent = v.count;
   $('#timebox').classList.toggle('up', v.up);
+  updPhaseTag();
 }
 function renderDrawers() {
   const t = curTimer(); const ri = $('#ratioInput');
   if (!t) { $('#rKv').innerHTML = ''; ri.value = fmtRatio(1); } else {
     if (document.activeElement !== ri) ri.value = fmtRatio(t.ratio || 1);
     let o = 0, c = 0, up = 0, co = 0, cc = 0;
-    for (const it of t.items) { if (it.mode === 'down') { o += it.sec; c += scaledSec(it, t); } else { up++; co += it.count || 0; cc += scaledCount(it, t); } }
+    for (const it of t.items) { const pr = prepSec(it) + restSec(it); o += pr; c += pr; if (it.mode === 'down') { o += it.sec; c += scaledSec(it, t); } else { up++; co += it.count || 0; cc += scaledCount(it, t); } }
     $('#rKv').innerHTML = `<span style="grid-column:1/-1;font-weight:700">當前計時長度</span><span>原始</span><b class="num">${fmt(o)}</b><span>轉換</span><b class="num">${fmt(c)}</b>` +
       (up ? `<span>次數</span><b class="num">${co} → ${cc}</b><span class="note">另有 ${up} 個正數計時項目，不計入長度</span>` : '');
   }
@@ -1840,6 +1892,7 @@ function renderEditForm() {
     <input class="ititle" id="eTitle" value="${esc(it.title)}" maxlength="20" aria-label="計時標題">
     <div class="modes"><button type="button" class="mode-c" data-act="setMode" data-m="down" aria-pressed="${it.mode === 'down'}">倒數計時</button><button type="button" class="mode-c" data-act="setMode" data-m="up" aria-pressed="${it.mode === 'up'}">計時器</button></div>
     <div class="spins">${spins}</div>
+    ${phaseEditHTML(it)}
     <div class="sound-h">音效</div>
     ${slotEditorHTML(it)}
   </div>
@@ -2379,7 +2432,7 @@ const fmtTime = ts => ts ? new Date(ts).toLocaleString('zh-TW', { month: 'numeri
 
 /* ================= delete: long-press / swipe / multi-select ================= */
 let SEL = null; // { kind, ctx, keys:Set }
-const APP_VER = '3.12';
+const APP_VER = '3.13';
 let swallowClick = false;
 const KIND_LABEL = { group: '群組', timer: '計時器模組', item: '計時器', sound: '音效' };
 function delName(kind, key) {
@@ -2640,7 +2693,7 @@ function bindEvents() {
     if (e.key === 'Escape') { if (SEL) exitSelect(); else if (SORT) exitSort(); else if (openDrawer) closeDrawers(); else if (page !== 'main') goBack(); else closeMenu(); }
   });
   document.addEventListener('pointerdown', e => { if (openDrawer && !e.target.closest('.ftab,.fpanel,.scrim,.toast')) closeDrawers(); }, true);
-  initRichView(); initRichEdit(); initLayout(); initSlots();
+  initRichView(); initRichEdit(); initLayout(); initSlots(); initPhase();
   const ri = $('#ratioInput');
   ri.addEventListener('focus', () => { const t = curTimer(); ri.value = (t ? t.ratio || 1 : 1).toFixed(2); ri.select(); });
   ri.addEventListener('change', () => setRatio(parseFloat(ri.value)));
@@ -4311,6 +4364,62 @@ function renderSlotSwitch() {
   }).join('');
   box.innerHTML = rows ? `<h3 class="ss-h">這個計時器的音效 <small>（點一下馬上換，只影響這次）</small></h3>${rows}` : '';
 }
+
+/* ================= per-item 講解準備 (it.prep) and 放鬆休息 (it.rest) — seconds (v3.13) ================= */
+const fmtMS = s => { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ':' + pad(s % 60); };
+function parseMS(v) {
+  v = String(v || '').trim().replace(/[：]/g, ':'); if (!v) return 0;
+  const m = v.match(/^(\d{1,3})(?::(\d{1,2}))?$/); if (!m) return null;
+  return clamp(m[2] != null ? +m[1] * 60 + +m[2] : +m[1], 0, 3600);
+}
+/* ---------- main screen ---------- */
+let phaseKey = '';
+function updPhaseTag() {
+  const el = $('#phaseTag'); if (!el) return;
+  const t = curTimer(), it = t && t.items[R.idx];
+  if (it && !R.running && R.elapsed === 0 && !R.finished) R.phase = firstPhase(it); // not started yet: follow the settings
+  const next = t && t.items[R.idx + 1];
+  let k = '', html = '';
+  if (it && !R.finished) {
+    if (R.phase === 'prep') { k = 'prep'; html = `<span class="pt-l">講解・準備</span><span class="pt-s">接著開始「${esc(it.title || '未命名')}」</span><button type="button" class="pt-b" data-act="phaseSkip">跳過 ▸</button>`; }
+    else if (R.phase === 'rest') { k = 'rest'; html = `<span class="pt-l">放鬆休息</span><span class="pt-s">${next ? `下一個：${esc(next.title || '未命名')}` : '這是最後一個'}</span><button type="button" class="pt-b" data-act="phaseSkip">${next ? '跳過 ▸' : '結束'}</button>`; }
+    else if (it.mode === 'up' && (R.running || R.elapsed > 0)) { k = 'up'; html = `<button type="button" class="pt-b" data-act="phaseSkip">完成這個動作 ▸${restSec(it) ? ` 休息 ${fmtMS(restSec(it))}` : ''}</button>`; }
+  }
+  const key = k + '|' + R.idx + '|' + (it && it.id) + '|' + (t && t.id);
+  const tb = $('#timebox'); tb.classList.toggle('ph-prep', k === 'prep'); tb.classList.toggle('ph-rest', k === 'rest');
+  if (key === phaseKey) return; phaseKey = key;
+  el.hidden = !k; el.className = 'phase-tag ' + k; el.innerHTML = html;
+}
+/* ---------- edit page ---------- */
+function phaseEditHTML(it) {
+  const row = (f, label, hint) => `<div class="pr-row" title="${hint}"><span class="pr-l">${label}</span><button type="button" data-act="prStep" data-f="${f}" data-d="-5" aria-label="${label}減 5 秒">−</button><input class="num" data-pr="${f}" value="${fmtMS(it[f])}" inputmode="numeric" aria-label="${label}（分:秒）"><button type="button" data-act="prStep" data-f="${f}" data-d="5" aria-label="${label}加 5 秒">＋</button></div>`;
+  return `<div class="pr-box">${row('prep', '前置講解', '開始這個動作前的講解、準備時間（0:00 = 沒有）')}${row('rest', '完成後休息', '這個動作完成後的放鬆休息時間（0:00 = 沒有）')}
+    <button type="button" class="chip pr-all" data-act="prAll" title="把講解與休息時間套用到這個模組的所有計時器">套用到全部計時器</button></div>`;
+}
+function initPhase() {
+  $('#pEdit').addEventListener('change', e => {
+    const f = e.target.dataset.pr; if (!f) return;
+    const it = selItem(); if (!it) return;
+    const v = parseMS(e.target.value);
+    if (v == null) { toast('請輸入秒數（例如 30）或 分:秒（例如 1:30）'); e.target.value = fmtMS(it[f]); return; }
+    it[f] = v; e.target.value = fmtMS(v); markDirty();
+  });
+  $('#pEdit').addEventListener('focusin', e => { if (e.target.dataset.pr) setTimeout(() => e.target.select(), 0); });
+  $('#pEdit').addEventListener('keydown', e => { if (e.target.dataset.pr && e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });
+}
+Object.assign(ACT, {
+  phaseSkip: () => phaseSkip(),
+  prStep: a => {
+    const it = selItem(); if (!it) return; const f = a.dataset.f;
+    it[f] = clamp((Math.round((it[f] || 0) / 5) * 5) + +a.dataset.d, 0, 3600); markDirty();
+    const inp = document.querySelector(`#eForm input[data-pr="${f}"]`); if (inp) inp.value = fmtMS(it[f]);
+  },
+  prAll: () => {
+    const it = selItem(); if (!it) return; const p = it.prep || 0, r = it.rest || 0;
+    E.draft.items.forEach(x => { x.prep = p; x.rest = r; }); markDirty();
+    toast(`已套用到 ${E.draft.items.length} 個計時器（講解 ${fmtMS(p)}、休息 ${fmtMS(r)}），按「儲存」生效`);
+  },
+});
 
 /* ================= boot ================= */
 (async () => {
