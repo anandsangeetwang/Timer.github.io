@@ -945,6 +945,10 @@ span.tag{cursor:default}
 #fp-ratio .note{font-size:11px;color:var(--leaf-ink);opacity:.8}
 .rt-b:disabled{opacity:.35}
 #fp-ratio{width:290px}
+/* v3.17 storage overview */
+.use-list{display:flex;flex-direction:column;gap:4px}
+.use-row{display:flex;justify-content:space-between;gap:10px;background:var(--white);border-radius:10px;padding:6px 10px;font-size:14px;text-align:left}
+.use-row span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style></head><body>
 <div class="app" id="app"></div>
 <div class="flash" id="flash"></div>
@@ -1153,12 +1157,14 @@ function synth(id, vol = 1, delay0 = 0) {
 const bufCache = new Map();
 function getBuffer(mediaId) {
   if (!mediaId) return Promise.resolve(null);
-  if (bufCache.has(mediaId)) return bufCache.get(mediaId);
+  if (bufCache.has(mediaId)) { bufTouch(mediaId); return bufCache.get(mediaId); }
   const p = (async () => {
     const c = audio(); if (!c) return null;
     const blob = await Store.getMedia(mediaId); if (!blob) return null;
     const ab = await blob.arrayBuffer();
-    return await new Promise(res => { try { c.decodeAudioData(ab, res, () => res(null)); } catch { res(null); } });
+    const buf = await new Promise(res => { try { c.decodeAudioData(ab, res, () => res(null)); } catch { res(null); } });
+    if (buf && bufCache.get(mediaId) === p) bufTouch(mediaId, buf); else if (!buf) bufCache.delete(mediaId);
+    return buf;
   })();
   bufCache.set(mediaId, p); return p;
 }
@@ -1578,7 +1584,7 @@ function buildShell() {
   </aside>
   <div class="set-main" id="setMain"></div>
   <input type="file" id="sFile" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg" hidden>
-  <input type="file" id="bFile" accept="application/json,.json" hidden>
+  <input type="file" id="bFile" accept="application/json,.json,application/zip,.zip" hidden>
 </div>
 <div class="selbar" id="selbar" hidden></div>
 ${composerShell()}`;
@@ -2118,7 +2124,7 @@ function renderSettings() {
   const m = $('#setMain');
   if (SV.view === 'general') m.innerHTML = generalHTML();
   else if (SV.view === 'backup') { m.innerHTML = backupHTML(); storageInfo(); }
-  else m.innerHTML = soundHTML();
+  else { m.innerHTML = soundHTML(); soundSize(sndById(SV.sel)); }
   updatePreviewUI();
 }
 function soundHTML() {
@@ -2129,6 +2135,7 @@ function soundHTML() {
   <div class="srow2"><button class="circ" data-act="replaceSound" ${builtin ? 'disabled' : ''} aria-label="上傳新的音檔取代">${I.upload}</button>
     <label class="pill-in-wrap"><span class="sr">音效名稱</span><span class="pre num">${i + 1}.</span><input class="pill-in" id="sName" value="${esc(s.name)}" maxlength="20" aria-label="音效名稱"></label></div>
   <div class="srow2"><button class="circ" data-act="prevPlay" aria-label="播放">${I.play}</button><div class="pill-g"><span class="tx" data-fit="mq">${builtin ? '內建音效' : esc(s.fileName || '音檔')}</span></div></div>
+  ${builtin ? '' : '<p class="hint" id="sSize" style="margin:-6px 0 0 76px"></p>'}
   <div class="srow2"><button class="circ" data-act="prevPause" aria-label="暫停">${I.pause}</button>
     <div><div class="pill-range"><input type="range" id="sSeek" min="0" max="${Math.max(1, dur)}" step="0.1" value="0" ${builtin ? 'disabled' : ''} aria-label="播放進度"></div>
     <div class="times num"><span id="sCur">0:00</span><span>${builtin ? '—' : fmtShort(dur)}</span></div></div></div>
@@ -2168,7 +2175,7 @@ function backupHTML() {
   return `<h1>備份與同步</h1>
   <div class="card" id="preCard" hidden><h2>升級前備份</h2><p>更新到 3.2 版時自動保存的資料（不含圖片音檔，圖片音檔仍在這台裝置上）。需要時可以還原。</p>
     <div class="line"><span id="preAt"></span><button class="save-btn alt" data-act="restorePre">還原</button></div></div>
-  <div class="card"><h2>手動備份</h2><p>「匯出設定」只有文字和設定，檔案很小，適合常常存到雲端；「匯出完整備份」包含圖片和音檔。匯入時會逐筆比較，保留較新的修改。</p>
+  <div class="card"><h2>手動備份</h2><p>「匯出設定」只有文字和設定，檔案很小，適合常常存到雲端；「匯出完整備份」是 ZIP 檔，包含圖片和音檔（舊的 .json 完整備份也能匯入）。匯入時會逐筆比較，保留較新的修改。</p>
     <div class="btnrow"><button class="save-btn" data-act="exportLight">匯出設定</button><button class="save-btn alt" data-act="exportFull">匯出完整備份</button><button class="save-btn alt" data-act="importData">匯入</button></div>
     <div class="kv2 num"><span>上次備份</span><b>${fmtTime(y.lastBackup)}</b><span>上次匯入</span><b>${fmtTime(y.lastImport)}</b><span>使用空間</span><b id="usage">計算中…</b></div>
     <div class="line"><span>有修改但超過幾天沒備份就提醒</span><span class="stepper"><button class="mini" data-act="remindStep" data-d="-1" aria-label="減少">−</button><b class="num">${y.remindDays ? y.remindDays + ' 天' : '不提醒'}</b><button class="mini" data-act="remindStep" data-d="1" aria-label="增加">＋</button></span></div></div>
@@ -2178,6 +2185,7 @@ function backupHTML() {
     ${y.mode !== 'off' ? `${ctl}<div class="line"><span id="syncStatus" class="sync-status">${syncStatusText()}</span><button class="save-btn" data-act="syncNow">立即同步</button></div>` : ''}</div>
   ${GD.supported() ? `<details class="card adv"><summary>進階設定：Google 用戶端 ID</summary><p>使用「Google 雲端硬碟」同步前，需要在 Google Cloud 建立一個 OAuth 用戶端 ID（網頁應用程式），把這個 App 的網址加入「已授權的 JavaScript 來源」。只需要設定一次。</p>
     <input class="pill-text" id="gClient" value="${esc(y.gClientId)}" placeholder="例如 1234567890-xxxx.apps.googleusercontent.com" ${GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== '__GCID__' ? 'disabled' : ''} aria-label="Google 用戶端 ID"></details>` : ''}
+  <div class="card" id="usageCard"><h2>空間使用</h2><p>計算中…</p></div>
   <div class="card"><h2>怎麼存到雲端</h2><ul class="how">${how}</ul></div>
   <div class="card"><h2>資料存放在哪裡</h2><p>資料存在這台裝置的瀏覽器（或主畫面 App）裡。手動備份與自動同步的檔案，都放在你自己的雲端空間，不會經過其他伺服器。清除瀏覽器資料或刪除 App 前，請先備份。</p></div>`;
 }
@@ -2185,6 +2193,7 @@ async function storageInfo() {
   try { const pb = await Store.get('backup-pre-3.2'); const c = $('#preCard'); if (pb && c) { c.hidden = false; $('#preAt').textContent = '保存於 ' + fmtTime(pb.at); } } catch {}
   const fn = $('#folderName'); if (fn) FolderCh.label().then(n => { fn.textContent = n || '尚未選擇'; });
   if (S.sync.mode === 'gdrive' && GD.clientId()) GD.loadGIS().catch(() => {});
+  renderUsage();
   const el = $('#usage'); if (!el) return;
   try { const e = await navigator.storage.estimate(); el.textContent = `約 ${(e.usage / 1048576).toFixed(1)} MB`; } catch { el.textContent = '—'; }
 }
@@ -2356,18 +2365,25 @@ async function saveFile(blob, name) {
 }
 async function exportData(full) {
   toast(full ? '正在打包圖片與音檔…' : '正在匯出設定…');
-  const out = await buildSnapshot(full);
   const d = new Date();
-  const name = full ? `瑜珈計時器-完整備份-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}.json` : '瑜珈計時器-設定.json';
-  const ok = await saveFile(new Blob([JSON.stringify(out)], { type: 'application/json' }), name);
+  const name = full ? `瑜珈計時器-完整備份-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}.zip` : '瑜珈計時器-設定.json';
+  let blob;
+  try { blob = full ? await exportFullZip() : new Blob([JSON.stringify(await buildSnapshot(false))], { type: 'application/json' }); }
+  catch (e) { toast('匯出失敗：' + (e && e.message || e)); return; }
+  const ok = await saveFile(blob, name);
   if (ok) { S.sync.lastBackup = Date.now(); save(); toast('已匯出 ' + name); if (page === 'settings') renderSettings(); }
 }
 async function importData(file) {
-  let raw;
-  try { raw = JSON.parse(await file.text()); } catch { toast('這個檔案不是有效的備份檔'); return; }
+  let raw, zipBlobs = null;
+  try {
+    const sig = new Uint8Array(await file.slice(0, 2).arrayBuffer());
+    if (sig[0] === 0x50 && sig[1] === 0x4b) { toast('正在讀取 ZIP 備份…'); const z = await zipToSnap(file); raw = z.raw; zipBlobs = z.blobs; } // full backup (ZIP)
+    else raw = JSON.parse(await file.text());
+  } catch { toast('這個檔案不是有效的備份檔'); return; }
   const inc = normalizeSnap(raw);
+  if (inc && zipBlobs) inc.blobs = zipBlobs;
   if (!inc) { toast('這個檔案不是瑜珈計時器的備份'); return; }
-  const nT = Object.keys(inc.data.timers).length, nM = Object.keys(inc.media).length;
+  const nT = Object.keys(inc.data.timers).length, nM = Object.keys(inc.blobs || inc.media).length;
   const r = await dialog({ title: '匯入備份', body: `檔案裡有 ${inc.data.groups.length} 個群組、${nT} 個計時器${nM ? `、${nM} 個圖片或音檔` : '（不含圖片與音檔）'}。<br>「合併」會逐筆比較，保留較新的修改，也會套用刪除。<br>「覆蓋」會讓這台裝置變成跟檔案一模一樣。`,
     buttons: [{ label: '取消', value: null }, { label: '覆蓋', value: 'replace', danger: true }, { label: '合併', value: 'merge', primary: true }] });
   if (!r.value) return;
@@ -2376,6 +2392,7 @@ async function importData(file) {
     if (!ok.value) return;
   }
   for (const [id, d] of Object.entries(inc.media)) { try { await Store.putMedia(id, dataURLToBlob(d)); } catch {} }
+  for (const [id, b] of Object.entries(inc.blobs || {})) { try { await Store.putMedia(id, b); } catch {} }
   const before = clone(localData());
   let m;
   if (r.value === 'replace') {
@@ -2558,7 +2575,7 @@ const fmtTime = ts => ts ? new Date(ts).toLocaleString('zh-TW', { month: 'numeri
 
 /* ================= delete: long-press / swipe / multi-select ================= */
 let SEL = null; // { kind, ctx, keys:Set }
-const APP_VER = '3.16';
+const APP_VER = '3.17';
 let swallowClick = false;
 const KIND_LABEL = { group: '群組', timer: '計時器模組', item: '計時器', sound: '音效' };
 function delName(kind, key) {
@@ -4970,6 +4987,109 @@ function initDescHist() {
   $('#eDesc').addEventListener('input', () => dhBtns());
 }
 Object.assign(ACT, { rtUndo: () => dhGo(-1), rtRedo: () => dhGo(1), rtCancel: () => dhCancel() });
+
+/* ================= many / large files: audio memory limit, ZIP full backup, storage overview (v3.17) ================= */
+/* ---- 1. decoded audio is big (1 min stereo ≈ 21 MB): keep only recently used ones in memory ---- */
+const BUF_CAP = (isIOS || isAndroid ? 120 : 400) * 1048576; // bytes of decoded audio kept
+const bufMeta = new Map(); // mediaId -> { bytes, last }
+function bufTouch(id, buf) {
+  const m = bufMeta.get(id) || { bytes: 0, last: 0 };
+  if (buf) m.bytes = buf.length * buf.numberOfChannels * 4;
+  m.last = Date.now(); bufMeta.set(id, m);
+  bufTrim();
+}
+function bufPinned() { // sounds the current 計時器模組 can play right now
+  const ids = new Set(), t = curTimer(); if (!t) return ids;
+  const add = sid => { const s = sndById(sid); if (s && s.mediaId) ids.add(s.mediaId); };
+  add(t.globalSound); for (const it of t.items) for (const k of ['start', 'during', 'end']) slotList(it, k).forEach(add);
+  for (const k of ['during', 'global']) if (CH[k] && CH[k].snd && CH[k].snd.mediaId) ids.add(CH[k].snd.mediaId);
+  return ids;
+}
+function bufTrim() {
+  let total = 0; for (const m of bufMeta.values()) total += m.bytes;
+  if (total <= BUF_CAP) return;
+  const pin = bufPinned();
+  for (const [id, m] of [...bufMeta.entries()].sort((a, b) => a[1].last - b[1].last)) {
+    if (total <= BUF_CAP) break; if (pin.has(id)) continue;
+    bufCache.delete(id); bufMeta.delete(id); total -= m.bytes;
+  }
+}
+
+/* ---- 2. full backup as a ZIP that is written piece by piece (no giant text in memory) ---- */
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+async function crcOf(blob) {
+  let c = 0xFFFFFFFF; const step = 4 * 1048576;
+  for (let o = 0; o < blob.size; o += step) {
+    const a = new Uint8Array(await blob.slice(o, o + step).arrayBuffer());
+    for (let i = 0; i < a.length; i++) c = CRC_T[(c ^ a[i]) & 255] ^ (c >>> 8);
+  }
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+const u16 = v => [v & 255, (v >>> 8) & 255], u32 = v => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
+async function makeZip(entries, onStep) { // entries: [{ name, blob }] stored (no compression: audio/images are already compressed)
+  const parts = [], central = []; let off = 0, i = 0;
+  for (const e of entries) {
+    const name = new TextEncoder().encode(e.name), crc = await crcOf(e.blob), size = e.blob.size;
+    const head = new Uint8Array([...u32(0x04034b50), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(size), ...u32(size), ...u16(name.length), ...u16(0)]);
+    parts.push(head, name, e.blob);
+    central.push(new Uint8Array([...u32(0x02014b50), ...u16(20), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(size), ...u32(size), ...u16(name.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(off)]), name);
+    off += head.length + name.length + size; onStep && onStep(++i, entries.length);
+  }
+  let clen = 0; central.forEach(x => { clen += x.length; });
+  const end = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(entries.length), ...u16(entries.length), ...u32(clen), ...u32(off), ...u16(0)]);
+  return new Blob([...parts, ...central, end], { type: 'application/zip' });
+}
+async function readZip(file) { // -> Map name -> Blob (slices of the file, nothing is copied into memory)
+  const tail = new DataView(await file.slice(Math.max(0, file.size - 65557)).arrayBuffer());
+  let p = -1; for (let i = tail.byteLength - 22; i >= 0; i--) if (tail.getUint32(i, true) === 0x06054b50) { p = i; break; }
+  if (p < 0) throw new Error('不是有效的 ZIP 檔');
+  const n = tail.getUint16(p + 10, true), clen = tail.getUint32(p + 12, true), coff = tail.getUint32(p + 16, true);
+  const cd = new DataView(await file.slice(coff, coff + clen).arrayBuffer()), out = new Map(); let q = 0;
+  for (let k = 0; k < n; k++) {
+    const method = cd.getUint16(q + 10, true), size = cd.getUint32(q + 20, true), nl = cd.getUint16(q + 28, true), xl = cd.getUint16(q + 30, true), cl = cd.getUint16(q + 32, true), lo = cd.getUint32(q + 42, true);
+    const name = new TextDecoder().decode(new Uint8Array(cd.buffer, cd.byteOffset + q + 46, nl));
+    const lh = new DataView(await file.slice(lo, lo + 30).arrayBuffer()), start = lo + 30 + lh.getUint16(26, true) + lh.getUint16(28, true);
+    if (method === 0) out.set(name, file.slice(start, start + size));
+    q += 46 + nl + xl + cl;
+  }
+  return out;
+}
+async function exportFullZip() {
+  const snap = await buildSnapshot(false), entries = [];
+  for (const id of Object.keys(snap.mediaTypes)) { const b = await Store.getMedia(id); if (b) entries.push({ name: 'media/' + id, blob: b }); }
+  entries.unshift({ name: 'data.json', blob: new Blob([JSON.stringify(snap)], { type: 'application/json' }) });
+  let shown = 0;
+  const zip = await makeZip(entries, (i, n) => { const pc = Math.floor(i / n * 10); if (pc !== shown) { shown = pc; toast(`正在打包圖片與音檔… ${i} / ${n}`); } });
+  return zip;
+}
+async function zipToSnap(file) {
+  const files = await readZip(file), d = files.get('data.json'); if (!d) throw new Error('ZIP 裡沒有 data.json');
+  const raw = JSON.parse(await d.text()), blobs = {};
+  for (const [name, b] of files) if (name.startsWith('media/')) { const id = name.slice(6); blobs[id] = new Blob([b], { type: (raw.mediaTypes || {})[id] || '' }); }
+  return { raw, blobs };
+}
+
+/* ---- 3. how much space sounds and pictures use ---- */
+const fmtMB = b => (!b ? '0 KB' : b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB');
+async function mediaUsage() {
+  const sounds = [], img = new Set(); let imgBytes = 0;
+  for (const s of S.sounds) if (s.mediaId) { const b = await Store.getMedia(s.mediaId); sounds.push({ s, bytes: b ? b.size : 0 }); }
+  for (const t of Object.values(S.timers)) for (const it of t.items) { if (it.imageId) img.add(it.imageId); if (it.scene && it.scene.media) it.scene.media.forEach(m => img.add(m)); }
+  for (const id of img) { const b = await Store.getMedia(id); if (b) imgBytes += b.size; }
+  return { sounds: sounds.sort((a, b) => b.bytes - a.bytes), sndBytes: sounds.reduce((a, x) => a + x.bytes, 0), imgN: img.size, imgBytes };
+}
+async function renderUsage() {
+  const el = $('#usageCard'); if (!el) return;
+  const u = await mediaUsage(); if (!$('#usageCard')) return;
+  let q = ''; try { const e = await navigator.storage.estimate(); q = e.quota ? `，這個瀏覽器可用約 ${fmtMB(e.quota)}` : ''; } catch {}
+  el.innerHTML = `<h2>空間使用</h2><p>音效 <b>${u.sounds.length}</b> 個、共 <b>${fmtMB(u.sndBytes)}</b>；圖片 <b>${u.imgN}</b> 張、共 <b>${fmtMB(u.imgBytes)}</b>${q}。</p>` +
+    (u.sounds.length ? `<p class="hint">最大的音效（點一下前往）：</p><div class="use-list">${u.sounds.slice(0, 8).map(x => `<button type="button" class="use-row" data-act="selSound" data-id="${x.s.id}"><span>${esc(x.s.name)}</span><b class="num">${fmtMB(x.bytes)}</b></button>`).join('')}</div>` : '') +
+    '<p class="hint">播放時只把最近用到的音樂放在記憶體，太久沒用的會自動釋放，下次播放再重新讀取。</p>';
+}
+async function soundSize(s) {
+  const el = $('#sSize'); if (!el || !s || !s.mediaId) return;
+  const b = await Store.getMedia(s.mediaId); if ($('#sSize')) el.textContent = b ? '檔案大小 ' + fmtMB(b.size) : '';
+}
 
 /* ================= boot ================= */
 (async () => {
