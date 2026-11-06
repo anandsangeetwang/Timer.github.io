@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>人體解剖 3D</title>
+<style>
+/* Layout: 3D viewer fills the left; a layer / search / info rail on the right (bottom on phones) */
+:root{
+  --bg:#eef1ef; --panel:#ffffff; --ink:#1d2a32; --soft:#5d6b74; --line:#d6dde1;
+  --accent:#16324a; --hi:#16b8c9; --chip:#e8edf0; --view:#f4f6f5; --warn:#e8892b;
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --num:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#11171b;--panel:#1a2227;--ink:#e3ebef;--soft:#9aaab3;--line:#2c373e;--accent:#9cc4e4;--chip:#243038;--view:#0d1215;color-scheme:dark}}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px}
+[hidden]{display:none!important}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+.app{height:100%;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;padding:12px max(12px,env(safe-area-inset-right,0px)) 12px max(12px,env(safe-area-inset-left,0px));box-sizing:border-box}
+.view{position:relative;background:var(--view);border-radius:16px;overflow:hidden;min-height:0}
+#cv{display:block;width:100%;height:100%;touch-action:none}
+.hud{position:absolute;left:10px;top:10px;display:flex;flex-wrap:wrap;gap:6px;pointer-events:none;max-width:60%}
+.hud span{background:color-mix(in srgb,var(--panel) 82%,transparent);border-radius:9px;padding:3px 8px;font-size:11px;color:var(--soft);font-family:var(--num)}
+.views{position:absolute;right:10px;top:10px;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.vb{background:color-mix(in srgb,var(--panel) 88%,transparent);border-radius:9px;padding:5px 9px;font-size:13px;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.banner{position:absolute;left:50%;top:52px;transform:translateX(-50%);background:var(--warn);color:#fff;border-radius:16px;padding:6px 8px 6px 14px;display:flex;gap:10px;align-items:center;font-weight:700;box-shadow:0 3px 12px rgba(0,0,0,.2)}
+.banner button{background:#fff;color:#a2560c;border-radius:12px;padding:4px 10px;font-weight:700}
+/* info card (like a tooltip window) */
+.card{position:absolute;right:12px;bottom:12px;width:min(440px,calc(100% - 24px));max-height:62%;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.22)}
+.card-h{display:flex;align-items:flex-start;gap:8px;padding:10px 12px 6px}
+.card-h h2{margin:0;font-size:17px;line-height:1.3}
+.card-h .en{font-size:12px;color:var(--soft);font-style:italic}
+.card-h .sys{display:inline-block;font-size:11px;border-radius:8px;padding:1px 7px;margin-top:3px;color:#fff}
+.card-h .ico{margin-left:auto;display:flex;gap:2px}
+.ib{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-size:16px}
+.ib:hover,.ib[aria-pressed="true"]{background:var(--chip)}
+.card-b{padding:4px 12px 10px;overflow:auto;line-height:1.75;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.card-b h4{margin:8px 0 2px;font-size:13px;color:var(--accent)}
+.card-b .muted{color:var(--soft);font-size:12px}
+.card-f{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line)}
+.card-f button{padding:9px 4px;font-size:13px;border-right:1px solid var(--line)}
+.card-f button:last-child{border-right:0}
+.card-f button:hover{background:var(--chip)}
+.card-f button[aria-pressed="true"]{background:var(--hi);color:#fff}
+.load{position:absolute;inset:0;display:grid;place-items:center;color:var(--soft);background:var(--view);font-size:15px}
+/* side rail */
+.side{background:var(--panel);border-radius:16px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;padding:11px 4px;font-weight:700;color:var(--soft);border-bottom:3px solid transparent}
+.tabs button[aria-selected="true"]{color:var(--ink);border-color:var(--accent)}
+.pane{overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px;flex:1;min-height:0}
+.lay{display:grid;grid-template-columns:34px minmax(0,1fr) 40px;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:6px 8px}
+.lay .ic{width:34px;height:34px;border-radius:8px;display:grid;place-items:center}
+.lay .ic svg{width:22px;height:22px}
+.lay .nm{font-size:13px;display:flex;justify-content:space-between;gap:6px}
+.lay .nm small{color:var(--soft);font-family:var(--num);font-size:11px}
+.lay input[type=range]{width:100%;accent-color:var(--accent);margin:4px 0 0}
+.lay .pc{font-family:var(--num);font-size:12px;color:var(--soft);text-align:right}
+.lay.loading .pc{color:var(--warn)}
+.row{display:flex;flex-wrap:wrap;gap:6px}
+.btn{border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--panel)}
+.btn.wide{width:100%}
+.btn.pri{background:var(--accent);color:var(--panel);border-color:var(--accent)}
+.chip{background:var(--chip);border-radius:12px;padding:5px 10px;font-size:13px}
+.sb{display:flex;gap:6px}
+.sb input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:var(--panel)}
+.res{display:flex;flex-direction:column;gap:2px}
+.res button{text-align:left;padding:7px 8px;border-radius:8px;display:flex;flex-direction:column}
+.res button:hover{background:var(--chip)}
+.res small{color:var(--soft);font-size:11px}
+.note{font-size:12px;color:var(--soft);line-height:1.6;margin:0}
+pre{margin:0;background:var(--chip);border-radius:8px;padding:8px;font-size:11px;font-family:var(--num);white-space:pre-wrap;word-break:break-all;max-height:160px;overflow:auto}
+h3{font-size:12px;letter-spacing:.06em;color:var(--soft);margin:4px 0 0}
+@media (max-width:760px){.app{grid-template-columns:1fr;grid-template-rows:58vh minmax(0,1fr);height:100%}.card{max-height:72%}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="view">
+    <canvas id="cv" aria-label="3D 人體模型。拖曳旋轉，雙指或滾輪縮放，點部位看說明"></canvas>
+    <div class="hud"><span id="hTri">—</span><span id="hFps">靜止</span><span id="hNet"></span></div>
+    <div class="views" role="group" aria-label="視角">
+      <button class="vb" data-v="front">前</button><button class="vb" data-v="back">後</button><button class="vb" data-v="left">左</button><button class="vb" data-v="right">右</button><button class="vb" data-v="top">上</button><button class="vb" data-v="reset">重置</button>
+    </div>
+    <div class="banner" id="isoBar" hidden><span id="isoTx"></span><button id="isoEnd">結束隔離</button></div>
+    <div class="card" id="card" hidden role="dialog" aria-label="部位說明"></div>
+    <div class="load" id="load">正在讀取部位清單…</div>
+  </div>
+  <aside class="side">
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="lay" aria-selected="true">解剖層</button>
+      <button role="tab" data-tab="find" aria-selected="false">搜尋</button>
+      <button role="tab" data-tab="cfg" aria-selected="false">計時器設定</button>
+    </div>
+    <div class="pane" id="p-lay">
+      <div class="row"><button class="btn" id="showHidden" hidden></button><button class="btn" id="unfadeAll" hidden>取消全部褪色</button></div>
+      <div id="layers"></div>
+      <button class="btn wide" id="hideAll">隱藏所有解剖圖層</button>
+      <p class="note">拉動滑桿調整每一層的透明度，拉到 0 就隱藏。第一次打開某一層時才從網路下載（全身全部約 14 MB）。</p>
+    </div>
+    <div class="pane" id="p-find" hidden>
+      <div class="sb"><input type="search" id="q" placeholder="輸入中文或英文，例如 斜方肌、psoas" autocomplete="off"></div>
+      <div class="res" id="res"><p class="note">可以搜尋所有 3,800 多個部位，還沒載入的層會自動打開。</p></div>
+    </div>
+    <div class="pane" id="p-cfg" hidden>
+      <p class="note">將來在計時器的編輯頁調好畫面後，只會存下面這一小段設定；練習時只下載設定裡看得到的部位。</p>
+      <pre id="cfg"></pre>
+      <div class="row"><button class="btn" id="copyCfg">複製設定</button><button class="btn pri" id="runMode">用「練習模式」重新載入</button></div>
+      <p class="note" id="runInfo"></p>
+      <h3>資料來源</h3>
+      <p class="note">模型與英文說明：Z-Anatomy（Gauthier Kervyn、Marcin Zielinski），以 BodyParts3D（© The Database Center for Life Science）為基礎，說明取自維基百科，授權 CC BY-SA 4.0。中文名稱與中文說明為本 App 整理。此資料集沒有完整的皮下脂肪層，「脂肪」只有脂肪墊；生殖系統目前只有男性。</p>
+    </div>
+  </aside>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const ICON = {
+  muscular: '<path d="M6 18c-2-4 0-10 4-12 3-1 5 1 4 3-1 3-5 2-5 6 0 2 3 3 6 2 2-1 3 0 2 2-2 2-8 3-11-1z" fill="currentColor"/>',
+  connective: '<path d="M9 3h6v4l-2 3 2 3v4h-6v-4l2-3-2-3z" fill="currentColor"/><path d="M8 20h8" stroke="currentColor" stroke-width="2"/>',
+  skeletal: '<path d="M12 3v18M7 6h10M6 10h12M6 14h12M7 18h10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/>',
+  respiratory: '<path d="M12 3v8M12 11c-2-2-3-1-4 1-2 4-3 8-1 9s4-1 5-5zM12 11c2-2 3-1 4 1 2 4 3 8 1 9s-4-1-5-5z" fill="currentColor" stroke="currentColor" stroke-width="1"/>',
+  endocrine: '<path d="M7 6c-3 2-3 9 0 12 2 1 4-1 5-4 1 3 3 5 5 4 3-3 3-10 0-12-2-1-4 1-5 4-1-3-3-5-5-4z" fill="currentColor"/>',
+  digestive: '<path d="M9 3v5c0 3 6 2 7 6s-2 7-6 7-5-3-3-5" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round"/>',
+  reproductive: '<circle cx="10" cy="10" r="5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M14 14l6 6M16 20h4v-4" stroke="currentColor" stroke-width="2.2" fill="none"/>',
+  urinary: '<path d="M6 4c-3 3-3 8 1 9l2-1-1-5zM18 4c3 3 3 8-1 9l-2-1 1-5zM9 12l2 6M15 12l-2 6M10 18h4v3h-4z" fill="currentColor" stroke="currentColor"/>',
+  cardiovascular: '<path d="M12 20s-8-5-8-11a4 4 0 0 1 8-1 4 4 0 0 1 8 1c0 6-8 11-8 11z" fill="currentColor"/>',
+  nervous: '<path d="M12 3v18M12 8l-5-3M12 8l5-3M12 13l-6-2M12 13l6-2M12 18l-4 2M12 18l4 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  lymphatic: '<circle cx="8" cy="7" r="2.5" fill="currentColor"/><circle cx="16" cy="12" r="2.5" fill="currentColor"/><circle cx="9" cy="18" r="2.5" fill="currentColor"/><path d="M8 7l8 5-7 6" stroke="currentColor" stroke-width="1.6" fill="none"/>',
+  fat: '<ellipse cx="12" cy="12" rx="8" ry="6" fill="currentColor"/>',
+  fascia: '<path d="M4 6c4 2 12 2 16 0M4 12c4 2 12 2 16 0M4 18c4 2 12 2 16 0" stroke="currentColor" stroke-width="2" fill="none"/>',
+  skin: '<path d="M12 3a3 3 0 1 1 0 6 3 3 0 0 1 0-6zM7 21l1-8-3-2 4-2h6l4 2-3 2 1 8" fill="currentColor"/>',
+};
+const SYS = [
+  ['skin', '皮膚與體表', '#d9a882', 0], ['fat', '脂肪', '#e9c75a', 0], ['fascia', '筋膜', '#cdbb9b', 0],
+  ['muscular', '肌肉系統', '#b5463b', 100], ['connective', '結締組織（韌帶、關節）', '#d9d4c3', 0], ['skeletal', '骨骼系統', '#e6dcc3', 100],
+  ['respiratory', '呼吸系統', '#e59aa3', 0], ['endocrine', '內分泌系統', '#9c7fd3', 0], ['digestive', '消化系統', '#d8956a', 0],
+  ['reproductive', '生殖系統', '#c58aa9', 0], ['urinary', '泌尿系統', '#c9a14a', 0], ['cardiovascular', '心血管系統', '#c7322c', 0],
+  ['nervous', '神經系統', '#e2c13e', 0], ['lymphatic', '淋巴系統', '#6fbf6f', 0],
+];
+const SYSM = Object.fromEntries(SYS.map(([k, n, c, d]) => [k, { k, n, c, d }]));
+const st = { op: {}, loaded: {}, loading: {}, hidden: new Set(), faded: new Set(), hi: new Set(), iso: null, sel: null, ins: false, run: null };
+SYS.forEach(([k, , , d]) => { st.op[k] = d; });
+
+/* ---------- three ---------- */
+const cv = $('#cv'), renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(32, 1, .01, 50);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8c8c8c, 1.5));
+const dl = new THREE.DirectionalLight(0xffffff, 1.5); dl.position.set(1, 1.5, 2); cam.add(dl); scene.add(cam);
+const ctl = new OrbitControls(cam, cv); ctl.enableDamping = true; ctl.dampingFactor = .12; ctl.minDistance = .08; ctl.maxDistance = 8;
+let needs = true; ctl.addEventListener('change', () => { needs = true; });
+function resize() { const r = cv.parentElement.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); cam.aspect = r.width / Math.max(1, r.height); cam.updateProjectionMatrix(); needs = true; }
+new ResizeObserver(resize).observe(cv.parentElement);
+const HOME = { pos: new THREE.Vector3(0, .1, 3.6), tgt: new THREE.Vector3(0, .1, 0) };
+function setView(v) {
+  if (v === 'reset') { cam.position.copy(HOME.pos); ctl.target.copy(HOME.tgt); ctl.update(); needs = true; drawCfg(); return; }
+  const t = ctl.target.clone(), d = cam.position.distanceTo(t);
+  const dir = { front: [0, 0, 1], back: [0, 0, -1], left: [-1, 0, 0], right: [1, 0, 0], top: [0, 1, .001] }[v];
+  cam.position.set(t.x + dir[0] * d, t.y + dir[1] * d, t.z + dir[2] * d); ctl.update(); needs = true; drawCfg();
+}
+
+/* ---------- data ---------- */
+let MAN = null, EXT = 1; const byId = {}, meshes = {}, desc = {};
+const colorOf = p => {
+  const b = p.b.toLowerCase();
+  if (p.sys === 'cardiovascular') return /vein|sinus|venous|vena/.test(b) ? '#3557b8' : '#c7322c';
+  if (p.sys === 'nervous') return /nerve|plexus|trunk|branch|root|ganglion|cauda|chorda|nerves/.test(b) ? '#e2c13e' : /cornea|lens|retina|sclera|iris|eyeball|vitreous|cochlea|tympanic|vestibul/.test(b) ? '#b9c9d6' : '#d6b0aa';
+  if (p.sys === 'skeletal' && /teeth|tooth|incisor|canine|molar|premolar/.test(b)) return '#f6f3ea';
+  if (p.sys === 'connective' && /disc|nucleus|menisc|cartilage|labrum/.test(b)) return '#9fc3cf';
+  if (p.sys === 'skin' && /hair|eyebrow|eyelash/.test(b)) return '#4a3a30';
+  if (p.sys === 'insertion') return p.k === 'o' ? '#d23a3a' : '#2f67d2';
+  return SYSM[p.sys] ? SYSM[p.sys].c : '#cccccc';
+};
+const MAT = {};
+function matFor(color, sys, kind) { // shared materials: kind = base | fade | hi
+  const key = color + sys + kind; if (MAT[key]) return MAT[key];
+  const m = new THREE.MeshStandardMaterial({ color: kind === 'hi' ? '#16b8c9' : color, roughness: .72, metalness: 0, side: THREE.DoubleSide });
+  m.userData = { sys, kind }; MAT[key] = m; applyOp(m); return m;
+}
+function applyOp(m) {
+  const { sys, kind } = m.userData; let o = (st.op[sys] ?? 100) / 100;
+  if (sys === 'insertion') o = 1;
+  if (kind === 'fade') o = Math.min(o, .18); if (kind === 'hi') o = Math.max(o, .95);
+  const tr = o < .99; if (m.transparent !== tr) m.needsUpdate = true;
+  m.transparent = tr; m.opacity = o; m.depthWrite = !tr;
+}
+function decode(buf, off, p) {
+  const dv = new DataView(buf, off, p.l); const big = dv.getUint8(3) === 76; const nv = dv.getUint32(4, true), nt = dv.getUint32(8, true);
+  const q = new Int16Array(buf, off + 12, nv * 3); const pos = new Float32Array(nv * 3); for (let i = 0; i < pos.length; i++) pos[i] = q[i] / 32767 * EXT;
+  let io = 12 + nv * 6; io += (4 - io % 4) % 4;
+  const idx = big ? new Uint32Array(buf.slice(off + io, off + io + nt * 12)) : new Uint16Array(buf.slice(off + io, off + io + nt * 6));
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setIndex(new THREE.BufferAttribute(idx, 1)); g.computeVertexNormals(); g.computeBoundingSphere();
+  return g;
+}
+function addPart(p, g) {
+  const m = new THREE.Mesh(g, matFor(colorOf(p), p.sys, 'base')); m.name = p.id; m.userData.p = p; m.renderOrder = p.sys === 'skin' ? 2 : p.sys === 'fascia' ? 1 : 0;
+  meshes[p.id] = m; scene.add(m); styleMesh(m);
+}
+let netBytes = 0;
+async function loadSystem(sys, ids) { // ids: only these parts (练習模式) — uses HTTP Range when possible
+  if (st.loaded[sys] && !ids) return; if (st.loading[sys]) return st.loading[sys];
+  const job = (async () => {
+    layerState(sys, 'loading');
+    const list = MAN.parts.filter(p => p.sys === sys && (!ids || ids.has(p.id)) && !meshes[p.id]);
+    if (!list.length) { st.loaded[sys] = !ids; layerState(sys); return; }
+    const url = `data/pack/${sys}.bin`; let buf = null, base = 0;
+    if (ids && list.length < MAN.parts.filter(p => p.sys === sys).length * .6) {
+      const lo = Math.min(...list.map(p => p.o)), hi = Math.max(...list.map(p => p.o + p.l));
+      try { const r = await fetch(url, { headers: { Range: `bytes=${lo}-${hi - 1}` } }); if (r.status === 206) { buf = await r.arrayBuffer(); base = lo; } else buf = await r.arrayBuffer(); } catch {}
+    }
+    if (!buf) buf = await (await fetch(url)).arrayBuffer();
+    netBytes += buf.byteLength; $('#hNet').textContent = `已下載 ${(netBytes / 1048576).toFixed(1)} MB`;
+    for (const p of list) addPart(p, decode(buf, p.o - base, p));
+    if (!ids) st.loaded[sys] = true; layerState(sys); triCount(); needs = true;
+  })();
+  st.loading[sys] = job; try { await job; } finally { delete st.loading[sys]; }
+}
+async function loadDesc(sys) {
+  const s = sys === 'insertion' ? 'muscular' : sys;
+  if (!desc[s]) desc[s] = fetch(`data/desc/${s}.json`).then(r => r.json()).catch(() => ({}));
+  return desc[s];
+}
+function triCount() { let t = 0, n = 0; for (const m of Object.values(meshes)) if (m.visible) { t += m.userData.p.t; n++; } $('#hTri').textContent = `${(t / 1000).toFixed(0)}k 三角形・${n} 部位`; }
+
+/* ---------- per-part state ---------- */
+function styleMesh(m) {
+  const p = m.userData.p, id = p.id;
+  let vis = (st.op[p.sys] ?? 0) > 0 && !st.hidden.has(id);
+  if (p.sys === 'insertion') vis = st.ins && st.sel && meshes[st.sel] && insFor(meshes[st.sel].userData.p).has(id);
+  if (st.iso && !st.iso.has(id) && p.sys !== 'insertion') vis = false;
+  if (st.run && !st.run.has(id) && p.sys !== 'insertion') vis = false;
+  m.visible = vis;
+  const kind = st.sel === id || st.hi.has(id) ? 'hi' : st.faded.has(id) ? 'fade' : 'base';
+  m.material = matFor(colorOf(p), p.sys, kind);
+}
+const insFor = p => new Set(MAN.parts.filter(x => x.sys === 'insertion' && x.b === p.b && (!p.side || x.side === p.side)).map(x => x.id));
+function restyle() { Object.values(meshes).forEach(styleMesh); Object.values(MAT).forEach(applyOp); needs = true; triCount(); drawCfg(); hiddenBtn(); }
+
+/* ---------- layers panel ---------- */
+function drawLayers() {
+  $('#layers').innerHTML = SYS.map(([k, n, c]) => { const cnt = MAN.parts.filter(p => p.sys === k).length; return `<div class="lay" data-k="${k}"><span class="ic" style="background:${c}22;color:${c}"><svg viewBox="0 0 24 24">${ICON[k]}</svg></span>
+    <div><div class="nm"><span>${n}</span><small>${cnt}</small></div><input type="range" min="0" max="100" value="${st.op[k]}" aria-label="${n} 不透明度"></div><span class="pc">${st.op[k]}%</span></div>`; }).join('');
+}
+function layerState(k, s) { const el = document.querySelector(`.lay[data-k="${k}"]`); if (!el) return; el.classList.toggle('loading', s === 'loading'); el.querySelector('.pc').textContent = s === 'loading' ? '載入…' : st.op[k] + '%'; }
+$('#layers').addEventListener('input', e => {
+  const k = e.target.closest('.lay').dataset.k; st.op[k] = +e.target.value; layerState(k);
+  if (st.op[k] > 0 && !st.loaded[k] && !st.run) loadSystem(k).then(restyle);
+  restyle();
+});
+$('#hideAll').addEventListener('click', () => { SYS.forEach(([k]) => { st.op[k] = 0; }); drawLayers(); restyle(); });
+function hiddenBtn() { const b = $('#showHidden'); b.hidden = !st.hidden.size; b.textContent = `顯示已隱藏的部位（${st.hidden.size}）`; $('#unfadeAll').hidden = !st.faded.size; }
+$('#showHidden').addEventListener('click', () => { st.hidden.clear(); restyle(); });
+$('#unfadeAll').addEventListener('click', () => { st.faded.clear(); restyle(); });
+
+/* ---------- selection + info card ---------- */
+const sideZh = s => (s === 'R' ? '右側' : s === 'L' ? '左側' : '');
+async function select(id) {
+  st.sel = id; st.ins = false; restyle();
+  const card = $('#card'); if (!id) { card.hidden = true; return; }
+  const p = byId[id], S = SYSM[p.sys] || { n: '肌肉起止點', c: '#888' };
+  card.hidden = false;
+  card.innerHTML = `<div class="card-h"><div><h2>${esc(sideZh(p.side) + p.zh)}</h2><div class="en">${esc(p.b)}</div><span class="sys" style="background:${S.c}">${S.n}</span></div>
+    <div class="ico"><button class="ib" id="cSpeak" title="朗讀" aria-label="朗讀">🔊</button><button class="ib" id="cLang" title="切換英文原文" aria-label="切換英文原文">EN</button><button class="ib" id="cX" title="關閉" aria-label="關閉">✕</button></div></div>
+    <div class="card-b" id="cBody"><span class="muted">讀取說明…</span></div>
+    <div class="card-f"><button id="cHide">隱藏</button><button id="cFade" aria-pressed="${st.faded.has(id)}">褪色</button><button id="cIso">隔離</button>${p.sys === 'muscular' ? '<button id="cIns" aria-pressed="false">起止點</button>' : `<button id="cHi" aria-pressed="${st.hi.has(id)}">設為重點</button>`}</div>`;
+  const d = (await loadDesc(p.sys))[p.b] || {};
+  let lang = d.zh ? 'zh' : 'en';
+  const body = () => {
+    const t = lang === 'zh' ? d.zh : d.en;
+    $('#cBody').innerHTML = t ? esc(t).replace(/^## (.*)$/gm, '<h4>$1</h4>') : `<span class="muted">${lang === 'zh' ? '這個部位還沒有中文說明，可以按 EN 看英文原文。' : '沒有英文說明。'}</span>`;
+    $('#cLang').setAttribute('aria-pressed', lang === 'en'); $('#cLang').textContent = lang === 'en' ? '中' : 'EN';
+  };
+  body();
+  $('#cLang').onclick = () => { lang = lang === 'zh' ? 'en' : 'zh'; body(); };
+  $('#cX').onclick = () => select(null);
+  $('#cSpeak').onclick = () => {
+    if (!('speechSynthesis' in window)) return; speechSynthesis.cancel();
+    const txt = lang === 'zh' ? sideZh(p.side) + p.zh + '。' + (d.zh || '') : p.b + '. ' + (d.en || '').replace(/## /g, '');
+    const u = new SpeechSynthesisUtterance(txt.slice(0, 1200)); u.lang = lang === 'zh' ? 'zh-TW' : 'en-US'; speechSynthesis.speak(u);
+  };
+  $('#cHide').onclick = () => { st.hidden.add(id); select(null); };
+  $('#cFade').onclick = e => { st.faded.has(id) ? st.faded.delete(id) : st.faded.add(id); e.target.setAttribute('aria-pressed', st.faded.has(id)); st.sel = null; restyle(); st.sel = id; };
+  $('#cIso').onclick = () => isolate(new Set([id]));
+  if ($('#cHi')) $('#cHi').onclick = e => { st.hi.has(id) ? st.hi.delete(id) : st.hi.add(id); e.target.setAttribute('aria-pressed', st.hi.has(id)); restyle(); };
+  if ($('#cIns')) $('#cIns').onclick = async e => { st.ins = !st.ins; e.target.setAttribute('aria-pressed', st.ins); if (st.ins) { await loadSystem('insertion'); } restyle(); };
+}
+function isolate(set) {
+  st.iso = set; const names = [...(set || [])].map(i => sideZh(byId[i].side) + byId[i].zh);
+  $('#isoBar').hidden = !set; if (set) { $('#isoTx').textContent = '隔離中：' + names.slice(0, 2).join('、') + (names.length > 2 ? ` 等 ${names.length} 個` : ''); focusOn([...set]); }
+  restyle();
+}
+$('#isoEnd').addEventListener('click', () => isolate(null));
+function focusOn(ids) {
+  const box = new THREE.Box3(); ids.forEach(i => meshes[i] && box.expandByObject(meshes[i])); if (box.isEmpty()) return;
+  const c = box.getCenter(new THREE.Vector3()), r = Math.max(.06, box.getSize(new THREE.Vector3()).length() / 2);
+  const dir = cam.position.clone().sub(ctl.target).normalize(); ctl.target.copy(c); cam.position.copy(c.clone().add(dir.multiplyScalar(Math.max(r * 5, .45)))); ctl.update(); needs = true;
+}
+const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(); let down = null;
+cv.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
+cv.addEventListener('pointerup', e => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
+  const r = cv.getBoundingClientRect(); ptr.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
+  ray.setFromCamera(ptr, cam);
+  const hit = ray.intersectObjects(Object.values(meshes).filter(m => m.visible && m.material.opacity > .25 && m.userData.p.sys !== 'insertion'), false)[0];
+  select(hit ? hit.object.name : null);
+});
+
+/* ---------- search ---------- */
+$('#q').addEventListener('input', () => {
+  const q = $('#q').value.trim().toLowerCase(); if (!q) { $('#res').innerHTML = ''; return; }
+  const seen = new Set(), out = [];
+  for (const p of MAN.parts) { if (p.sys === 'insertion') continue; const key = p.b + p.side; if (seen.has(key)) continue; if (p.zh.toLowerCase().includes(q) || p.b.toLowerCase().includes(q)) { seen.add(key); out.push(p); if (out.length >= 200) break; } }
+  const rank = p => (p.zh.toLowerCase().startsWith(q) || p.b.toLowerCase().startsWith(q) ? 0 : 2) + (['muscular', 'skeletal'].includes(p.sys) ? 0 : 1); out.sort((a, b) => rank(a) - rank(b)); out.length = Math.min(out.length, 40);
+  $('#res').innerHTML = out.map(p => `<button data-id="${p.id}"><span>${esc(sideZh(p.side) + p.zh)}</span><small>${esc(p.b)}・${SYSM[p.sys].n}</small></button>`).join('') || '<p class="note">找不到符合的部位</p>';
+});
+$('#res').addEventListener('click', async e => {
+  const b = e.target.closest('[data-id]'); if (!b) return; const p = byId[b.dataset.id];
+  if (!st.op[p.sys]) { st.op[p.sys] = 100; drawLayers(); }
+  const outer = ['skin', 'fat', 'fascia', 'muscular'], inner = !['skin', 'muscular', 'skeletal', 'fascia'].includes(p.sys);
+  if (inner) { for (const k of outer) if (st.op[k] > 20) st.op[k] = 20; if (st.op.skeletal > 35) st.op.skeletal = 35; drawLayers(); } // see deep parts through the outer layers
+  st.hidden.delete(p.id); await loadSystem(p.sys); restyle(); select(p.id); focusOn([p.id]);
+});
+
+/* ---------- tabs ---------- */
+document.querySelector('.tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-selected', x === b)); ['lay', 'find', 'cfg'].forEach(k => { $('#p-' + k).hidden = k !== b.dataset.tab; }); });
+document.querySelector('.views').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) setView(b.dataset.v); });
+
+/* ---------- timer config + 練習模式 (load only what is visible) ---------- */
+function visibleIds() { return new Set(Object.values(meshes).filter(m => m.visible && m.userData.p.sys !== 'insertion').map(m => m.name)); }
+function cfgObj() {
+  const r = v => Math.round(v * 1000) / 1000;
+  return { layers: Object.fromEntries(Object.entries(st.op).filter(([, v]) => v > 0)), hidden: [...st.hidden], faded: [...st.faded], hi: [...st.hi], iso: st.iso ? [...st.iso] : undefined,
+    cam: { p: cam.position.toArray().map(r), t: ctl.target.toArray().map(r) } };
+}
+function drawCfg() { const c = cfgObj(), s = JSON.stringify(c); $('#cfg').textContent = s.length > 1500 ? s.slice(0, 1500) + '…' : s; }
+$('#copyCfg').addEventListener('click', async () => { try { await navigator.clipboard.writeText(JSON.stringify(cfgObj())); $('#copyCfg').textContent = '已複製'; } catch { $('#copyCfg').textContent = '無法複製'; } setTimeout(() => { $('#copyCfg').textContent = '複製設定'; }, 1500); });
+$('#runMode').addEventListener('click', async () => {
+  const need = visibleIds(); if (!need.size) { $('#runInfo').textContent = '目前畫面上沒有任何部位。'; return; }
+  const c = cfgObj();
+  for (const m of Object.values(meshes)) { scene.remove(m); m.geometry.dispose(); } for (const k in meshes) delete meshes[k];
+  for (const k in st.loaded) delete st.loaded[k]; netBytes = 0; st.run = need;
+  const t0 = performance.now(); const systems = [...new Set([...need].map(i => byId[i].sys))];
+  await Promise.all(systems.map(s => loadSystem(s, need)));
+  restyle(); cam.position.fromArray(c.cam.p); ctl.target.fromArray(c.cam.t); ctl.update();
+  $('#runInfo').innerHTML = `練習模式：只下載 ${need.size} 個部位、${(netBytes / 1048576).toFixed(2)} MB，花 ${((performance.now() - t0) / 1000).toFixed(1)} 秒。<button class="btn" id="exitRun">回到編輯模式</button>`;
+  $('#exitRun').onclick = () => location.reload();
+});
+
+/* ---------- start ---------- */
+let frames = 0, last = performance.now();
+renderer.setAnimationLoop(() => { const ch = ctl.update(); if (needs || ch) { renderer.render(scene, cam); needs = false; frames++; } const n = performance.now(); if (n - last > 1000) { $('#hFps').textContent = frames ? frames + ' fps' : '靜止'; frames = 0; last = n; } });
+try {
+  MAN = await (await fetch('data/manifest.json')).json(); EXT = MAN.ext; MAN.parts.forEach(p => { byId[p.id] = p; });
+  drawLayers(); setView('reset'); resize();
+  $('#load').textContent = '正在下載骨骼與肌肉…';
+  await Promise.all(SYS.filter(([k]) => st.op[k] > 0).map(([k]) => loadSystem(k)));
+  $('#load').hidden = true; restyle();
+} catch (e) { $('#load').textContent = '載入失敗：' + (e.message || e); }
+</script>
+</body>
+</html>
