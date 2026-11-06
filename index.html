@@ -850,6 +850,92 @@ span.tag{cursor:default}
 @media (min-width:701px){ .controls{gap:12px} .ctl.redo{width:50px;height:50px} .ctl.redo svg{width:24px;height:24px} }
 @media (max-width:1000px) and (min-width:701px){ .ctl.redo{width:44px;height:44px} .controls{gap:8px} }
 @media (max-width:700px){ .controls{gap:24px} .ctl.redo{width:58px;height:58px} }
+/* ================= v3.15 ================= */
+/* overlay on the image: bar (瀏覽中 / 臨時計時) + phase tag; semi-transparent so the picture shows through */
+.stage-ov{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:4;display:flex;flex-direction:column;align-items:center;gap:8px;width:calc(100% - 28px);pointer-events:none}
+.stage-ov > *{pointer-events:auto}
+.stage-ov .phase-tag{position:static;transform:none;max-width:100%;background:rgba(219,232,251,.5);box-shadow:none;padding:5px 8px 5px 14px;gap:8px;border:1px solid rgba(255,255,255,.6)}
+.stage-ov .phase-tag.rest{background:rgba(217,240,200,.5)}
+.stage-ov .phase-tag.up{background:transparent;border:0}
+.stage-ov .phase-tag .pt-l{font-size:15px;text-shadow:0 0 6px #fff}
+.stage-ov .phase-tag .pt-s{color:var(--ink);text-shadow:0 0 6px #fff}
+.stage-ov .phase-tag .pt-b{background:rgba(255,255,255,.75)}
+.stage-ov .phase-tag:hover{background:rgba(255,255,255,.88)}
+.stage-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 8px;max-width:100%;padding:6px 8px 6px 14px;border-radius:18px;font-size:14px;box-shadow:0 3px 12px rgba(0,0,0,.18)}
+.stage-bar[hidden]{display:none}
+.stage-bar.peek{background:#ffe2b3;border:2px solid #e8892b}
+.stage-bar.qt{background:#ead8f7;border:2px solid #8a4fc0}
+.stage-bar.pulse{animation:sbpulse 1s 2}
+@keyframes sbpulse{50%{transform:scale(1.04);box-shadow:0 0 0 6px rgba(232,137,43,.35)}}
+.sb-l{font-weight:800}
+.sb-run{font-size:13px}
+.sb-run b{font-size:15px;margin-left:4px}
+.sb-b{background:var(--white);border-radius:14px;padding:5px 11px;font-size:13px;font-weight:700}
+.sb-b.main{background:#e8892b;color:#fff}
+.stage.peek .image-wrap{box-shadow:0 0 0 4px #e8892b}
+.stage.peek .title-pill{background:#ffe2b3}
+.stage.nextup .title-pill{background:#d9f0c8}
+.item-pill.peeking{outline:3px solid #e8892b;outline-offset:-3px}
+.timer-pill.peeking{border-color:#e8892b;border-style:dashed}
+/* image display: whole / fill width (scroll down) / fill height (scroll sideways) */
+.image-box.fit-w,.image-box.fit-h{display:block;overflow:auto;-webkit-overflow-scrolling:touch;place-items:unset}
+.image-box.fit-w > img{position:static;width:100%;height:auto;display:block}
+.image-box.fit-h > img{position:static;height:100%;width:auto;max-width:none;display:block}
+.image-box.fit-h{white-space:nowrap}
+.img-fit-btn{position:absolute;right:16px;bottom:16px;z-index:3;background:rgba(255,255,255,.8);border-radius:14px;padding:5px 10px;font-size:12px;color:var(--ink-soft);box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.img-fit-btn[hidden]{display:none}
+.lay-fit{display:flex;align-items:center;gap:4px}
+.lay-fit select{border:0;border-radius:8px;padding:3px 4px;font-size:12px;background:var(--white)}
+/* sound picker */
+.snd-pick{flex:1;min-width:0;display:flex;align-items:center;gap:4px;background:var(--white);border-radius:12px;padding:7px 10px;font-size:14px;text-align:left;color:var(--ink)}
+.snd-pick span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.snd-pick b{color:var(--ink-soft);font-size:11px}
+.sp-dlg{width:min(680px,100%);max-height:calc(100vh - 32px)}
+.sp-search{display:flex;align-items:center;gap:6px;border:2px solid var(--panel);border-radius:12px;padding:4px 10px}
+.sp-search svg{width:18px;height:18px;color:var(--ink-soft)}
+.sp-search input{flex:1;border:0;font-size:16px;padding:4px 0;outline:none;background:none}
+.sp-body{display:grid;grid-template-columns:180px minmax(0,1fr);gap:10px;min-height:0;height:min(54vh,460px)}
+.sp-cats{overflow:auto;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--panel-2);padding-right:6px}
+.sp-cats button{text-align:left;padding:6px 10px;border-radius:10px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp-cats button small{color:var(--ink-soft);font-size:11px}
+.sp-cats button[aria-selected="true"]{background:var(--pink);font-weight:700}
+.sp-list{overflow:auto;display:flex;flex-direction:column;gap:2px}
+.sp-row{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:10px;cursor:pointer}
+.sp-row:hover,.sp-row.act{background:var(--panel-2)}
+.sp-row.cur{background:#fde3e3}
+.sp-play{width:30px;height:30px;border-radius:50%;background:var(--panel-2);display:grid;place-items:center;flex:none;color:var(--ink)}
+.sp-play svg{width:14px;height:14px}
+.sp-play.blank{background:none}
+.sp-name{flex:1;min-width:0;display:flex;flex-direction:column}
+.sp-name b{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp-name small{font-size:11px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp-ck{color:var(--pink-deep);font-weight:800}
+.sp-dlg .btns{align-items:center}
+.sp-n{margin-right:auto;font-size:13px}
+@media (max-width:700px){
+  .sp-body{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);height:62vh}
+  .sp-cats{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--panel-2);padding:0 0 6px}
+  .sp-cats button{padding-left:10px!important;background:var(--panel-2);flex:none}
+  .stage-bar{font-size:13px}
+}
+/* settings: categories */
+.cat-ed{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;background:var(--panel-2);border-radius:14px;padding:8px 12px}
+.cat-l{font-weight:700}
+.cat-chips{display:flex;flex-wrap:wrap;gap:4px;flex:1}
+.cat-chip{display:inline-flex;align-items:center;gap:2px;background:var(--white);border-radius:12px;padding:3px 4px 3px 10px;font-size:13px}
+.cat-chip button{width:20px;height:20px;border-radius:50%;color:var(--ink-soft)}
+.cat-add{display:flex;gap:6px;align-items:center}
+.cat-add input{border:2px solid var(--panel);border-radius:10px;padding:5px 8px;font-size:14px;width:200px}
+.s-cat{margin:4px 0 2px;width:100%;border:0;border-radius:10px;padding:6px 8px;font-size:13px;background:var(--white);color:var(--ink)}
+/* quick timer dialog */
+.qt-dlg{width:min(460px,100%)}
+.qt-dlg .fld{display:flex;flex-direction:column;gap:4px;font-size:14px}
+.qt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.qt-grid label{display:flex;flex-direction:column;gap:4px;font-size:13px}
+.qt-grid input{font-size:18px;font-weight:700;text-align:center;border:2px solid var(--panel);border-radius:10px;padding:6px}
+.qt-snd{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:14px}
+.qt-snd .snd-pick{background:var(--panel-2)}
+.sb-b{flex:none}
 </style></head><body>
 <div class="app" id="app"></div>
 <div class="flash" id="flash"></div>
@@ -888,6 +974,7 @@ const I = {
   flower: '<svg viewBox="0 0 56 36" aria-hidden="true"><g fill="currentColor"><circle cx="28" cy="11" r="9"/><circle cx="16" cy="20" r="9"/><circle cx="40" cy="20" r="9"/><circle cx="28" cy="24" r="10"/></g><path d="M21 22l7-7 7 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z" fill="currentColor"/></svg>',
   pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z" fill="currentColor"/></svg>',
+  qt: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 9.5v4.2l2.6 1.6M9.5 2.5h5M12 2.5V6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M18.5 4.5l1.8 1.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
   redo: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.3-5.4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M20 3.5v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 8.6v6.8l5.4-3.4z" fill="currentColor"/></svg>',
   reset: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.3-5.4" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M4 3.5v5h5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   menu: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>',
@@ -1016,7 +1103,7 @@ const save = () => { clearTimeout(saveT); saveT = setTimeout(() => Store.set('st
 function touch(rec) { if (rec) { rec.u = Date.now(); rec.d = DEV; } S.sync.changedAt = Date.now(); Sync.schedule(); }
 function touchPrefs() { S.settingsU = Date.now(); S.sync.changedAt = Date.now(); Sync.schedule(); }
 function tomb(kind, id) { S.deleted[kind + ':' + id] = Date.now(); S.sync.changedAt = Date.now(); Sync.schedule(); }
-const curTimer = () => (S && S.timers[S.currentTimerId]) || null;
+const curTimer = () => (QT && QT.timer) || (S && S.timers[S.currentTimerId]) || null; // QT = 臨時計時器 (stage.js)
 const scaledSec = (it, t) => Math.max(1, Math.round(it.sec * (t.ratio || 1)));
 const scaledCount = (it, t) => Math.max(1, Math.round((it.count || 0) * (t.ratio || 1)));
 const fmtRatio = r => r.toFixed(2).padStart(5, '0') + '倍';
@@ -1180,7 +1267,7 @@ function phaseMs(it, t, ph) {
 }
 function resetRun() {
   R.running = false; R.idx = 0; R.elapsed = 0; R.gElapsed = 0; R.finished = false; R.lastSec = -1; R.lastGSec = -1;
-  const t = curTimer(); R.phase = firstPhase(t && t.items[0]); stopAllSound(); releaseAwake();
+  const t = curTimer(); R.phase = firstPhase(t && t.items[0]); stopAllSound(); releaseAwake(); PEEK = null;
 }
 function enterMain(it) { R.phase = 'main'; R.elapsed = 0; R.lastSec = -1; if (R.running) { cue(slotSnd(it, 'start')); startCh('during', slotSnd(it, 'during')); } }
 function enterItem() {
@@ -1188,7 +1275,7 @@ function enterItem() {
   R.elapsed = 0; R.lastSec = -1;
   if (prepSec(it)) R.phase = 'prep'; else enterMain(it);
 }
-function finishRun() { R.running = false; R.finished = true; stopAllSound(); releaseAwake(); flash(); renderControls(); renderStage(); toast('練習完成'); }
+function finishRun() { R.running = false; R.finished = true; stopAllSound(); releaseAwake(); flash(); const pk = !!PEEK; PEEK = null; renderControls(); if (pk) renderItems(); renderStage(); toast('練習完成'); }
 function nextItem() {
   const t = curTimer();
   if (R.idx < t.items.length - 1) { R.idx++; enterItem(); renderItems(); renderStage(); } else finishRun();
@@ -1397,9 +1484,9 @@ let openDrawer = null;
 function buildShell() {
   $('#app').innerHTML = `
 <div class="page main" id="pMain">
-  <div class="topbar"><button class="icon-btn" data-act="menu" aria-label="開啟群組清單">${I.menu}</button><div class="tname" id="tName"></div><button class="icon-btn keys-t" data-act="arrange" aria-label="調整區塊順序">${LI.order}</button><button class="icon-btn keys-t" data-act="search" aria-label="搜尋">${I.search}</button><button class="icon-btn keys-t" data-act="keys" aria-label="快捷鍵清單">${I.keys}</button><button class="icon-btn gear-t" data-act="settings" aria-label="設定">${I.gear}</button></div>
+  <div class="topbar"><button class="icon-btn" data-act="menu" aria-label="開啟群組清單">${I.menu}</button><div class="tname" id="tName"></div><button class="icon-btn keys-t" data-act="qtOpen" aria-label="臨時計時器">${I.qt}</button><button class="icon-btn keys-t" data-act="arrange" aria-label="調整區塊順序">${LI.order}</button><button class="icon-btn keys-t" data-act="search" aria-label="搜尋">${I.search}</button><button class="icon-btn keys-t" data-act="keys" aria-label="快捷鍵清單">${I.keys}</button><button class="icon-btn gear-t" data-act="settings" aria-label="設定">${I.gear}</button></div>
   <aside class="groups" id="groups" aria-label="群組與計時器">
-    <div class="groups-head"><button class="gear" data-act="settings" aria-label="設定">${I.gear}</button><button class="tri up" data-act="gup" aria-label="群組往上捲">${I.flower}</button><button class="sort-btn" data-act="sortMode" title="排序群組與計時器（S）" aria-label="排序群組與計時器">${I.sort}</button><button class="sort-btn keys-btn" data-act="keys" title="快捷鍵（F1）" aria-label="快捷鍵清單">${I.keys}</button></div>
+    <div class="groups-head"><button class="gear" data-act="settings" aria-label="設定">${I.gear}</button><button class="tri up" data-act="gup" aria-label="群組往上捲">${I.flower}</button><button class="sort-btn" data-act="sortMode" title="排序群組與計時器（S）" aria-label="排序群組與計時器">${I.sort}</button><button class="sort-btn" data-act="qtOpen" title="臨時計時器（T）" aria-label="臨時計時器">${I.qt}</button><button class="sort-btn keys-btn" data-act="keys" title="快捷鍵（F1）" aria-label="快捷鍵清單">${I.keys}</button></div>
     <button class="search-pill" data-act="search" title="搜尋（${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} + K）">${I.search}<span>搜尋群組、計時器</span></button>
     <div class="sortbar" id="sortBar" hidden><span>按住 ≡ 拖曳調整順序</span><button class="save-btn" data-act="sortDone">完成</button></div>
     <div class="group-list" id="groupList"></div>
@@ -1415,7 +1502,7 @@ function buildShell() {
   <section class="stage">
     <div class="stage-head"><div class="title-pill" id="title"></div>
       <div class="timebox" id="timebox"><button class="time-pill num" id="time" data-act="toggle" aria-label="開始或暫停"></button><div class="count-pill num" id="count"></div></div></div>
-    <div class="image-wrap" id="imgWrap"><div class="image-box" id="imgBox"></div><div class="phase-tag" id="phaseTag" hidden></div></div>
+    <div class="image-wrap" id="imgWrap"><div class="image-box" id="imgBox"></div><div class="stage-ov"><div class="stage-bar" id="stageBar" hidden></div><div class="phase-tag" id="phaseTag" hidden></div></div><button type="button" class="img-fit-btn" id="imgFitBtn" data-act="imgFitCycle" hidden></button></div>
     <div class="splitter" id="split" role="separator" aria-orientation="horizontal" aria-label="拖曳調整圖片與說明的大小（只影響這次）" tabindex="0"><span></span><div class="sp-btns"><button type="button" class="sp-b" id="splitFlip" data-act="layFlip">⇆</button><button type="button" class="sp-b" id="splitRst" data-act="layReset" title="回到編輯時設定的比例" hidden>↺</button></div></div>
     <div class="desc" id="desc" role="region" aria-labelledby="descH"><div class="desc-h" id="descH">說明<span class="desc-nav" id="descNav" hidden><button type="button" data-act="descPrev" aria-label="上一欄">◀</button><span class="num" id="descPg"></span><button type="button" data-act="descNext" aria-label="下一欄">▶</button></span></div><div class="desc-body rich" id="descText"></div></div>
   </section>
@@ -1462,6 +1549,7 @@ function buildShell() {
         <button type="button" class="rt-ins" data-act="rtTable" title="插入表格">${RI.table}<span>表格</span></button>
         <button type="button" class="rt-ins" data-act="rtFold" title="插入可以摺疊的段落（選取文字會放進去）">${RI.fold}<span>摺疊</span></button>
         <button type="button" class="rt-clear" data-act="rtClear">清除格式</button>
+        <button type="button" class="rt-clear rt-paste" id="rtPasteMode" data-act="rtPasteMode" title="Ctrl + V 貼上時要不要保留原本的格式（Ctrl + Shift + V 一律純文字）">貼上：保留格式</button>
       </div>
       <div class="rt-tbl" id="rtTbl" hidden><b>表格</b><button type="button" data-act="tblRow">＋列</button><button type="button" data-act="tblCol">＋欄</button><button type="button" data-act="tblDelRow">−列</button><button type="button" data-act="tblDelCol">−欄</button><button type="button" class="danger" data-act="tblDel">刪除表格</button></div>
       <div id="eDesc" class="rt rich" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="eDescLbl" data-ph="寫下這個動作的提示。選取文字後可以改大小、顏色、底色或加連結；也可以插入分隔線、表格、摺疊段落"></div></div></div>
@@ -1469,7 +1557,8 @@ function buildShell() {
 </div>
 <div class="page set" id="pSet" hidden>
   <aside class="set-aside">
-    <div class="s-search"><span aria-hidden="true">${I.search}</span><input id="sQuery" type="search" placeholder="搜尋音效名稱或檔名" autocomplete="off" aria-label="搜尋音效"><span id="sCount" class="num"></span></div>
+    <div class="s-search"><span aria-hidden="true">${I.search}</span><input id="sQuery" type="search" placeholder="搜尋音效名稱、檔名或分類" autocomplete="off" aria-label="搜尋音效"><span id="sCount" class="num"></span></div>
+    <select id="sCat" class="s-cat" aria-label="依分類篩選"></select>
     <button class="flower up" data-act="sup" aria-label="清單往上">${I.flower}</button>
     <div class="snd-list" id="sndList"></div>
     <button class="flower down" data-act="sdown" aria-label="清單往下">${I.flower}</button>
@@ -1501,7 +1590,7 @@ function renderGroups() {
       body = `<div class="tlist">${g.timerIds.map(id => `<div class="trow" data-del="timer" data-key="${id}" role="checkbox" aria-checked="${SEL.keys.has(id)}" tabindex="0">${ck(SEL.keys.has(id))}<span class="tx" data-fit="2">${esc(S.timers[id].name)}</span></div>`).join('')}</div>`;
     } else {
       const pill = t
-        ? `<div class="timer-pill ${tid === S.currentTimerId ? 'current' : ''}" role="button" tabindex="0" data-act="pickTimer" data-g="${gi}" data-del="timer" data-key="${tid}" data-ctx="${g.id}"><span class="tx" data-fit="2">${esc(t.name)}</span><span class="pos num">${g.cur + 1} / ${n}</span><button class="pcopy" data-act="clipTimer" data-id="${tid}" data-g="${g.id}" title="複製這個模組（之後到群組按「貼上」）" aria-label="複製 ${esc(t.name)}">${IC_COPY}</button><button class="pencil" data-act="editTimer" data-id="${tid}" aria-label="編輯 ${esc(t.name)}">${I.pencil}</button></div>`
+        ? `<div class="timer-pill ${tid === S.currentTimerId && !QT ? 'current' : ''} ${PEEK && PEEK.tid === tid ? 'peeking' : ''}" role="button" tabindex="0" data-act="pickTimer" data-g="${gi}" data-del="timer" data-key="${tid}" data-ctx="${g.id}"><span class="tx" data-fit="2">${esc(t.name)}</span><span class="pos num">${g.cur + 1} / ${n}</span><button class="pcopy" data-act="clipTimer" data-id="${tid}" data-g="${g.id}" title="複製這個模組（之後到群組按「貼上」）" aria-label="複製 ${esc(t.name)}">${IC_COPY}</button><button class="pencil" data-act="editTimer" data-id="${tid}" aria-label="編輯 ${esc(t.name)}">${I.pencil}</button></div>`
         : `<div class="timer-pill" role="button" tabindex="0" data-act="addTimer" data-g="${gi}">＋ 新增計時器</div>`;
       body = `<div class="carousel"><button class="side" data-act="gprev" data-g="${gi}" aria-label="上一個計時器" ${n < 2 ? 'disabled' : ''}>${I.chevL}</button>${pill}<button class="side" data-act="gnext" data-g="${gi}" aria-label="下一個計時器" ${n < 2 ? 'disabled' : ''}>${I.chevR}</button></div>`;
     }
@@ -1511,25 +1600,27 @@ function renderGroups() {
 }
 function renderItems() {
   setTimeout(() => fitAll($('#itemList')), 0);
-  const t = curTimer(), el = $('#itemList');
-  el.innerHTML = t && t.items.length ? t.items.map((it, i) => `<button class="item-pill ${i === R.idx ? 'current' : ''}" data-act="pickItem" data-i="${i}"><span class="tx" data-fit="2">${i + 1}.${esc(it.title || '未命名')}</span></button>`).join('')
+  const t = viewTimer(), el = $('#itemList'), same = t === curTimer();
+  el.innerHTML = t && t.items.length ? t.items.map((it, i) => `<button class="item-pill ${same && i === R.idx ? 'current' : ''} ${PEEK && i === PEEK.idx ? 'peeking' : ''}" data-act="pickItem" data-i="${i}"><span class="tx" data-fit="2">${i + 1}.${esc(it.title || '未命名')}</span></button>`).join('')
     : '<div class="placeholder">沒有項目</div>';
-  const c = el.querySelector('.current');
+  const c = el.querySelector('.peeking') || el.querySelector('.current');
   if (c) {
     if (isPortrait()) { const l = c.offsetLeft - el.offsetLeft; if (l < el.scrollLeft || l + c.offsetWidth > el.scrollLeft + el.clientWidth) el.scrollLeft = l - el.clientWidth / 2 + c.offsetWidth / 2; }
     else { const tp = c.offsetTop - el.offsetTop; if (tp < el.scrollTop || tp + c.offsetHeight > el.scrollTop + el.clientHeight) el.scrollTop = tp - el.clientHeight / 2 + c.offsetHeight / 2; }
   }
 }
 function renderStage() {
-  const t = curTimer(), it = t && t.items[R.idx];
-  $('#title').textContent = it ? (it.title || '未命名') : (t ? '還沒有計時項目' : '還沒有計時器'); $('#title').title = $('#title').textContent; requestAnimationFrame(fitTitle);
+  const V = stageView(), t = V.t, it = V.it;
+  $('#title').textContent = it ? (V.next ? '下一個：' : '') + (it.title || '未命名') : (t ? '還沒有計時項目' : '還沒有計時器'); $('#title').title = $('#title').textContent; requestAnimationFrame(fitTitle);
+  document.querySelector('.stage').classList.toggle('peek', !!V.peek); document.querySelector('.stage').classList.toggle('nextup', !!V.next);
   $('#tName').textContent = t ? t.name : '瑜珈計時器';
   $('#descText').innerHTML = it ? (it.descHtml ? cleanHTML(it.descHtml) : esc(it.desc || '')) : ''; richShow($('#descText'));
   const box = $('#imgBox'), want = it && it.imageId;
   box.dataset.img = want || '';
+  imgFitApply(box, it);
   if (want) mediaURL(want).then(u => { if (box.dataset.img === want) box.innerHTML = u ? `<img src="${u}" alt="${esc(it.title)}">` : ph(); });
   else box.innerHTML = ph(t ? '點左側計時器的鉛筆，可以為這個項目加入圖片' : '按左側「＋」新增計時器');
-  updateLive(); renderDrawers(); applySplit();
+  updateLive(); renderDrawers(); applySplit(); updStageBar(true);
 }
 const ph = (msg = '找不到圖片') => `<div class="placeholder">${I.pose}<span>${esc(msg)}</span></div>`;
 function renderControls() {
@@ -1541,7 +1632,7 @@ function updateLive() {
   if (te.textContent !== v.time) te.textContent = v.time;
   if (ce.textContent !== v.count) ce.textContent = v.count;
   $('#timebox').classList.toggle('up', v.up);
-  updPhaseTag();
+  updPhaseTag(); updStageBar();
 }
 function renderDrawers() {
   const t = curTimer(); const ri = $('#ratioInput');
@@ -1670,11 +1761,11 @@ async function swCopy() {
 const LAY = {}, LAY_MIN = .2, LAY_MAX = .8;
 function itemLay(it) { const d = it && it.lay; return { m: d && d.m === 'h' ? 'h' : 'v', p: clamp(d && isFinite(d.p) ? d.p : (S.settings.split || .68), LAY_MIN, LAY_MAX) }; }
 function curLay() {
-  const t = curTimer(), it = t && t.items[R.idx];
+  const it = stageView().it;
   if (!it) return Object.assign(itemLay(null), { id: null, dflt: true });
   return Object.assign(itemLay(it), LAY[it.id] || {}, { id: it.id, dflt: !LAY[it.id] });
 }
-function resetTempLayout() { for (const k of Object.keys(LAY)) delete LAY[k]; PORD = null; for (const k of Object.keys(RSND)) delete RSND[k]; }
+function resetTempLayout() { for (const k of Object.keys(LAY)) delete LAY[k]; PORD = null; for (const k of Object.keys(RSND)) delete RSND[k]; for (const k of Object.keys(IMGFIT)) delete IMGFIT[k]; }
 function applySplit() {
   const stage = document.querySelector('.stage'), iw = $('#imgWrap'), sp = $('#split'); if (!stage) return;
   applyOrder();
@@ -1806,8 +1897,10 @@ function cleanHTML(html) {
       const color = ch.style && ch.style.color, size = ch.style && ch.style.fontSize, weight = ch.style && ch.style.fontWeight, bg = ch.style && ch.style.backgroundColor;
       if (ch.tagName === 'FONT') { const c = ch.getAttribute('color'); const sp = doc.createElement('span'); if (c) sp.style.color = c; sp.append(...ch.childNodes); ch.replaceWith(sp); walk(sp); continue; }
       if (color && RT_COLOR.test(color)) keep.color = color;
-      if (bg && RT_COLOR.test(bg) && !/^(transparent|rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\))$/i.test(bg)) keep.backgroundColor = bg;
+      if (bg && RT_COLOR.test(bg) && !/^(transparent|white|#fff(fff)?|rgb\(\s*255\s*,\s*255\s*,\s*255\s*\)|rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\))$/i.test(bg)) keep.backgroundColor = bg;
       if (size && /^\d{1,2}(\.\d+)?px$/.test(size)) keep.fontSize = size;
+      else if (size && /^\d{1,2}(\.\d+)?pt$/.test(size)) { const px = Math.round(parseFloat(size) * 4 / 3); if (px >= 8 && px <= 96 && px !== 16) keep.fontSize = px + 'px'; }
+      if (keep.color && /^(black|#000(000)?|rgb\(\s*0\s*,\s*0\s*,\s*0\s*\)|windowtext)$/i.test(keep.color)) delete keep.color;
       if (weight && /^(bold|[5-9]00)$/.test(weight)) keep.fontWeight = weight;
       const href = ch.tagName === 'A' ? safeHref(ch.getAttribute('href')) : '';
       if (ch.tagName === 'A' && !href) { walk(ch); ch.replaceWith(...ch.childNodes); continue; }
@@ -1823,7 +1916,7 @@ function cleanHTML(html) {
 let rtRange = null;
 function syncDesc() {
   const it = selItem(); if (!it) return; const ed = $('#eDesc');
-  it.descHtml = cleanHTML(ed.innerHTML); it.desc = ed.innerText.trim(); markDirty();
+  it.descHtml = rtTrimEmpty(cleanHTML(ed.innerHTML)); it.desc = ed.innerText.trim(); markDirty();
 }
 function rtRestore() {
   const ed = $('#eDesc'); ed.focus();
@@ -1912,12 +2005,12 @@ function renderEditForm() {
     <div class="sound-h">音效</div>
     ${slotEditorHTML(it)}
   </div>
-  <div class="srow"><label for="sGlobal">全域</label><select id="sGlobal" data-snd="global">${soundOptions(E.draft.globalSound)}</select></div>
+  <div class="srow"><label>全域</label>${sndPickBtn(E.draft.globalSound, 'data-act="sndPickG"', '全域音效')}</div>
   <div class="line"><span>不使用全域</span><button type="button" class="toggle" role="switch" aria-checked="${!!it.noGlobal}" data-act="noGlobal" aria-label="不使用全域"></button></div>`;
 }
 function renderEditMedia() {
-  renderLayRow(); pvRefresh();
-  const it = selItem(); const box = $('#eImg');
+  renderLayRow(); pvRefresh(); pasteModeBtn();
+  const it = selItem(); const box = $('#eImg'); if (it) imgFitApply(box, Object.assign({}, it, { id: '__edit' }));
   $('#eDesc').innerHTML = it ? (it.descHtml ? cleanHTML(it.descHtml) : esc(it.desc || '').replace(/\n/g, '<br>')) : ''; richEditPrep($('#eDesc'));
   const want = it && it.imageId; box.dataset.img = want || '';
   const actions = want ? `<div class="img-actions"><span class="chip" data-act="pickImg">編輯排版</span><span class="chip" data-act="imgRemove">移除</span></div>` : '';
@@ -2025,6 +2118,7 @@ function soundHTML() {
     <div class="times num"><span id="sCur">0:00</span><span>${builtin ? '—' : fmtShort(dur)}</span></div></div></div>
   <div class="line big"><button type="button" class="toggle" role="switch" aria-checked="${!!s.loop}" data-act="sLoop" aria-label="是否循環配合計時器"></button><span>是否循環配合計時器</span></div>
   <div class="line big"><div class="spin digit2"><button type="button" data-act="sPlays" data-d="1" aria-label="增加">▲</button><input class="num" id="sPlays" inputmode="numeric" value="${pad(s.plays || 1)}" aria-label="播放次數"><button type="button" data-act="sPlays" data-d="-1" aria-label="減少">▼</button></div><span>撥放次數</span></div>
+  ${catEditHTML(s)}
   <p class="hint">開啟「循環」時，這個音效當「過程」或「全域」音效會一直重複到項目結束；關閉時只播放設定的次數。當「起始」或「結束」音效時，會播放設定的次數。${builtin ? '內建音效不能取代或刪除，但可以改名稱。' : ''}</p>`;
 }
 function generalHTML() {
@@ -2448,7 +2542,7 @@ const fmtTime = ts => ts ? new Date(ts).toLocaleString('zh-TW', { month: 'numeri
 
 /* ================= delete: long-press / swipe / multi-select ================= */
 let SEL = null; // { kind, ctx, keys:Set }
-const APP_VER = '3.14';
+const APP_VER = '3.15';
 let swallowClick = false;
 const KIND_LABEL = { group: '群組', timer: '計時器模組', item: '計時器', sound: '音效' };
 function delName(kind, key) {
@@ -2629,13 +2723,13 @@ const ACT = {
   toggle: () => (R.running ? pause() : play()),
   reset: () => { resetRun(); renderItems(); renderStage(); renderControls(); },
   redoItem: () => redoItem(),
-  pickItem: a => selectItem(+a.dataset.i),
+  pickItem: a => pickItemView(+a.dataset.i),
   addGroup: async () => { const n = await ask('新增群組', '新群組'); if (n) { const g = { id: uid(), name: n, timerIds: [], cur: 0 }; touch(g); S.groups.push(g); save(); renderGroups(); const l = $('#groupList'); l.scrollTop = l.scrollHeight; } },
   renameGroup: async a => { const g = S.groups[+a.dataset.g]; const n = await ask('群組名稱', g.name); if (n) { g.name = n; touch(g); save(); renderGroups(); } },
   addTimer: a => openEdit(null, +a.dataset.g),
   gprev: a => { const g = S.groups[+a.dataset.g]; g.cur = (g.cur - 1 + g.timerIds.length) % g.timerIds.length; save(); renderGroups(); },
   gnext: a => { const g = S.groups[+a.dataset.g]; g.cur = (g.cur + 1) % g.timerIds.length; save(); renderGroups(); },
-  pickTimer: a => { const g = S.groups[+a.dataset.g]; const id = g.timerIds[g.cur]; if (id !== S.currentTimerId) selectTimer(id); closeMenu(); },
+  pickTimer: a => { const g = S.groups[+a.dataset.g]; const id = g.timerIds[g.cur]; pickTimerView(id); closeMenu(); },
   editTimer: a => openEdit(a.dataset.id),
   rtSizeUp: () => { const i = $('#rtSize'); i.value = clamp((+i.value || 16) + 2, 8, 96); rtApply('size', i.value); },
   rtSizeDn: () => { const i = $('#rtSize'); i.value = clamp((+i.value || 16) - 2, 8, 96); rtApply('size', i.value); },
@@ -2710,7 +2804,7 @@ function bindEvents() {
     if (e.key === 'Escape') { if (SEL) exitSelect(); else if (SORT) exitSort(); else if (openDrawer) closeDrawers(); else if (page !== 'main') goBack(); else closeMenu(); }
   });
   document.addEventListener('pointerdown', e => { if (openDrawer && !e.target.closest('.ftab,.fpanel,.scrim,.toast')) closeDrawers(); }, true);
-  initRichView(); initRichEdit(); initLayout(); initSlots(); initPhase();
+  initRichView(); initRichEdit(); initLayout(); initSlots(); initPhase(); initSndCat();
   const ri = $('#ratioInput');
   ri.addEventListener('focus', () => { const t = curTimer(); ri.value = (t ? t.ratio || 1 : 1).toFixed(2); ri.select(); });
   ri.addEventListener('change', () => setRatio(parseFloat(ri.value)));
@@ -2734,7 +2828,7 @@ function bindEvents() {
   $('#rtSize').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.target.dispatchEvent(new Event('change')); } });
   $('#rtPick').addEventListener('change', e => rtApply('color', e.target.value));
   $('.rt-bar').addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
-  $('#eDesc').addEventListener('paste', e => { e.preventDefault(); const t = (e.clipboardData || window.clipboardData).getData('text/plain'); document.execCommand('insertText', false, t); });
+  $('#eDesc').addEventListener('paste', richPaste);
   $('#pEdit').addEventListener('focusout', e => { if (e.target.matches('select[data-snd]')) stopPv(); });
   $('#pEdit').addEventListener('focusin', e => { if (e.target.matches('.spin input')) setTimeout(() => e.target.select(), 0); });
   $('#eFile').addEventListener('change', async e => {
@@ -2768,6 +2862,20 @@ async function cleanMedia() {
 /* ================= image composer (layout editor) ================= */
 const FABRIC_SRC = 'fabric.min.js'; // fabric is normally bundled into the page
 const ASPECTS = { '4:3': [1200, 900], '16:9': [1280, 720], '1:1': [1000, 1000], '3:4': [900, 1200] };
+const ASPECT_LIST = ['4:3', '3:4', '16:9', '9:16', '1:1', '3:2', '2:3', '21:9', '2:1', '1:2', '1:1.414', '1.414:1', '1:3', '3:1'];
+const ASPECT_NAME = { '1:1.414': 'A4 直', '1.414:1': 'A4 橫', '9:16': '9:16 手機直', '21:9': '21:9 寬螢幕', '1:3': '1:3 長條', '3:1': '3:1 橫幅' };
+/* any "W:H" (e.g. 5:7, 2.5:1) is accepted; the long side is about 1600 px */
+function aspDims(a) {
+  if (ASPECTS[a]) return ASPECTS[a].slice();
+  const m = String(a || '').match(/^(\d+(?:\.\d+)?):(\d+(?:\.\d+)?)$/); if (!m) return [1200, 900];
+  const w = +m[1], h = +m[2]; if (!w || !h) return [1200, 900];
+  const k = 1600 / Math.max(w, h); return [Math.round(w * k), Math.round(h * k)];
+}
+const aspOK = a => !!ASPECTS[a] || /^\d+(\.\d+)?:\d+(\.\d+)?$/.test(String(a || ''));
+function aspectOptions(cur) {
+  const list = ASPECT_LIST.includes(cur) || !cur ? ASPECT_LIST : [...ASPECT_LIST, cur];
+  return list.map(k => `<option value="${k}">${ASPECT_NAME[k] || k}</option>`).join('') + '<option value="custom">自訂比例…</option>';
+}
 const CFONT = '"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif';
 const C = { cv: null, tool: 'select', color: '#d64545', width: 6, fontSize: 48, filled: false, aspect: '4:3', W: 1200, H: 900,
   hist: [], hi: -1, lock: false, dirty: false, draw: null, crop: null, mediaIds: new Set() };
@@ -2814,7 +2922,7 @@ function composerShell() {
       <label class="cprop">字級 <input type="number" id="cFont" min="8" max="400" step="1" value="48" inputmode="numeric" list="cSizes" aria-label="文字大小"><datalist id="cSizes"><option value="24"><option value="32"><option value="48"><option value="64"><option value="88"><option value="120"></datalist></label>
       <label class="cprop"><input type="checkbox" id="cFill"> 實心</label>
       <label class="cprop">背景 <input type="color" id="cBg" value="#ffffff" aria-label="背景顏色"></label>
-      <label class="cprop">比例 <select id="cAspect">${Object.keys(ASPECTS).map(k => `<option>${k}</option>`).join('')}</select></label>
+      <label class="cprop">比例 <select id="cAspect">${aspectOptions('4:3')}</select></label>
       <span class="cprop crop-ctl" id="cropCtl" hidden><button type="button" class="save-btn" data-act="cCropOk">套用裁切</button><button type="button" class="save-btn alt" data-act="cCropNo">取消裁切</button></span>
     </div>
     <div class="comp-act"><button type="button" class="sort-btn keys-btn" data-act="keys" title="快捷鍵（F1）" aria-label="快捷鍵清單">${I.keys}</button><button type="button" class="save-btn alt" data-act="cCancel">取消</button><button type="button" class="save-btn" data-act="cDone">完成</button></div>
@@ -2832,8 +2940,8 @@ async function openComposer() {
   if (!C.cv) initCanvas();
   C.mediaIds = new Set(); C.dirty = false; C.hist = []; C.hi = -1; C.crop = null; $('#cropCtl').hidden = true;
   const sc = it.scene;
-  C.aspect = sc && ASPECTS[sc.aspect] ? sc.aspect : '4:3'; $('#cAspect').value = C.aspect;
-  [C.W, C.H] = ASPECTS[C.aspect];
+  C.aspect = sc && aspOK(sc.aspect) ? sc.aspect : '4:3'; $('#cAspect').innerHTML = aspectOptions(C.aspect); $('#cAspect').value = C.aspect;
+  [C.W, C.H] = aspDims(C.aspect);
   C.cv.clear(); C.cv.backgroundColor = (sc && sc.bg) || '#ffffff'; $('#cBg').value = C.cv.backgroundColor;
   fitCanvas();
   C.lock = true;
@@ -3058,7 +3166,7 @@ function histBtns() { $('#cUndo').disabled = C.hi <= 0; $('#cRedo').disabled = C
 function loadHist(i) {
   if (i < 0 || i >= C.hist.length) return;
   C.hi = i; const j = JSON.parse(C.hist[i]); C.lock = true;
-  if (j.aspect && j.aspect !== C.aspect) { C.aspect = j.aspect; [C.W, C.H] = ASPECTS[C.aspect]; $('#cAspect').value = C.aspect; fitCanvas(); }
+  if (j.aspect && j.aspect !== C.aspect) { C.aspect = j.aspect; [C.W, C.H] = aspDims(C.aspect); $('#cAspect').innerHTML = aspectOptions(C.aspect); $('#cAspect').value = C.aspect; fitCanvas(); }
   C.cv.loadFromJSON(j, () => { C.cv.backgroundColor = j.bg || '#ffffff'; $('#cBg').value = C.cv.backgroundColor; C.lock = false; setTool('select'); C.cv.renderAll(); C.dirty = true; histBtns(); });
 }
 const undo = () => { const o = C.cv.getActiveObject(); if (o && o.isEditing) o.exitEditing(); if (C.crop) cropEnd(false); flushHist(); loadHist(C.hi - 1); };
@@ -3090,7 +3198,16 @@ function bindComposer() {
   $('#cFill').addEventListener('change', e => { C.filled = e.target.checked; applyToSel(o => { if (o.type === 'rect' || o.type === 'ellipse') o.set('fill', C.filled ? (o.stroke || C.color) : 'transparent'); }); });
   $('#cBg').addEventListener('input', e => { if (C.cv) { C.cv.backgroundColor = e.target.value; C.cv.renderAll(); } });
   $('#cBg').addEventListener('change', () => { C.dirty = true; pushHist(); });
-  $('#cAspect').addEventListener('change', e => { C.aspect = e.target.value; [C.W, C.H] = ASPECTS[C.aspect]; fitCanvas(); C.dirty = true; pushHist(); });
+  $('#cAspect').addEventListener('change', async e => {
+    let a = e.target.value;
+    if (a === 'custom') {
+      const v = await ask('自訂比例（寬:高，例如 5:7 或 2.5:1）', C.aspect);
+      a = v && v.replace(/[：比x×]/g, ':').replace(/\s/g, '');
+      if (!a || !aspOK(a)) { if (v) toast('格式是 寬:高，例如 5:7'); e.target.value = C.aspect; return; }
+      e.target.innerHTML = aspectOptions(a); e.target.value = a;
+    }
+    C.aspect = a; [C.W, C.H] = aspDims(C.aspect); fitCanvas(); C.dirty = true; pushHist();
+  });
 }
 
 /* ================= sort mode: drag groups and timers ================= */
@@ -3195,7 +3312,7 @@ function initSortDrag() {
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
 const MOD = isMac ? '⌘' : 'Ctrl';
 const SHORTCUTS = {
-  main: [['空白鍵', '開始／暫停'], ['R', '整個模組從頭開始'], ['Shift + R', '重來這個動作（不含講解）'], ['↑ ／ ↓', '上一個／下一個項目'], ['1～9', '跳到第 N 個項目'], ['← ／ →', '同一群組的上一個／下一個計時器'],
+  main: [['空白鍵', '開始／暫停'], ['R', '整個模組從頭開始'], ['T', '臨時計時器'], ['Shift + R', '重來這個動作（不含講解）'], ['↑ ／ ↓', '上一個／下一個項目'], ['1～9', '跳到第 N 個項目'], ['← ／ →', '同一群組的上一個／下一個計時器'],
     ['E', '編輯目前的計時器模組'], [MOD + ' + C ／ ' + MOD + ' + V', '複製目前的計時器模組／貼到目前所在的群組（也可以點群組上的「貼上」）'], ['C', '複製目前的模組到指定群組（會問要放哪裡）'], ['N', '開關模組說明'], ['W', '開關碼表'], ['L', '碼表記錄一筆'], ['F', '全螢幕'], ['S', '進入／離開排序模式'], [MOD + ' + K 或 /', '搜尋群組、計時器模組、計時器（#標籤 可找模組）'], ['滑鼠雙擊項目', '切換到該項目並開始'], ['Esc', '關閉抽屜／返回'], ['? 或 F1', '顯示這份清單']],
   edit: [[MOD + ' + S', '儲存'], [MOD + ' + K', '搜尋（未儲存時會先提醒）'], ['Esc', '返回（未儲存會先詢問）'], ['Alt + ↑ ／ ↓', '選上一個／下一個項目'], ['Alt + Shift + ↑ ／ ↓', '把目前項目上移／下移'],
     ['Alt + N', '新增計時器'], ['Alt + C', '在這個模組複製目前計時器'], [MOD + ' + C ／ ' + MOD + ' + V', '複製目前的計時器／貼在目前選取的計時器後面（可以到別的模組再貼上）'], ['Alt + Shift + C', '把目前計時器複製到指定的模組'], ['Alt + Delete', '刪除目前計時器'], ['Alt + T', '切換倒數計時／計時器'], ['Alt + I', '打開圖片排版'], ['Alt + M', '編輯模組說明（#標籤）'],
@@ -3262,7 +3379,9 @@ function initShortcuts() {
       else if (/^[1-9]$/.test(k) && t && +k <= t.items.length) selectItem(+k - 1);
       else if (k === 'ArrowLeft' || k === 'ArrowRight') { e.preventDefault(); moveTimerInGroup(k === 'ArrowRight' ? 1 : -1); }
       else if ((k === 'e' || k === 'E') && t) openEdit(S.currentTimerId);
-      else if ((k === 'c' || k === 'C') && t) copyTimers([t.id]);
+      else if ((k === 'c' || k === 'C') && t && !QT) copyTimers([t.id]);
+      else if (k === 't' || k === 'T') ACT.qtOpen();
+      else if (k === 'Escape' && PEEK) ACT.peekBack();
       else if (k === 'w' || k === 'W') setDrawer('sw');
       else if (k === 'n' || k === 'N') setDrawer('note');
       else if ((k === 'l' || k === 'L') && (openDrawer === 'sw' || S.sw.running)) swAct('lap');
@@ -3300,7 +3419,7 @@ function initShortcuts() {
     }
   }, true);
   // double-click an item: jump to it and start
-  $('#itemList').addEventListener('dblclick', e => { const b = e.target.closest('.item-pill'); if (!b) return; selectItem(+b.dataset.i); if (!R.running) play(); });
+  $('#itemList').addEventListener('dblclick', e => { const b = e.target.closest('.item-pill'); if (!b) return; switchToView(+b.dataset.i, true); });
 }
 
 /* ================= search (groups / timers / timer items) ================= */
@@ -3439,12 +3558,13 @@ function goResult(r, edit) {
 /* ---------- sound list search (settings) ---------- */
 function filterSounds() {
   const inp = $('#sQuery'); if (!inp) return;
-  const ts = terms(inp.value); let n = 0;
+  sCatOptions();
+  const ts = terms(inp.value), cat = ($('#sCat') || {}).value || ''; let n = 0;
   document.querySelectorAll('#sndList .snd-row').forEach(row => {
-    const s = sndById(row.dataset.key); const ok = !ts.length || (s && (hit(s.name, ts) || hit(s.fileName, ts)));
+    const s = sndById(row.dataset.key); const ok = s && inCat(s, cat) && (!ts.length || hit(s.name, ts) || hit(s.fileName, ts) || hit(sndCats(s).join(' '), ts));
     row.hidden = !ok; if (ok) n++;
   });
-  const c = $('#sCount'); if (c) c.textContent = ts.length ? `${n} 個符合` : '';
+  const c = $('#sCount'); if (c) c.textContent = ts.length || cat ? `${n} 個符合` : '';
   S.sndQuery = inp.value;
 }
 
@@ -3840,8 +3960,35 @@ function initRichView() {
 function richEditPrep(ed) {
   if (!ed) return;
   for (const d of ed.querySelectorAll('details')) d.open = true; // always open while editing
-  tblBarUpd();
+  rtGuards(ed); tblBarUpd();
 }
+/* keep an empty line before / after / between folds, tables and lines, so the caret can always get there */
+const RT_BLOCK = n => n && n.nodeType === 1 && /^(DETAILS|TABLE|HR)$/.test(n.tagName);
+const rtLine = () => { const d = document.createElement('div'); d.innerHTML = '<br>'; return d; };
+function rtGuards(ed) {
+  if (!ed) return;
+  const kids = [...ed.childNodes].filter(n => !(n.nodeType === 3 && !n.nodeValue.trim()));
+  if (!kids.length) return;
+  if (RT_BLOCK(kids[0])) ed.insertBefore(rtLine(), kids[0]);
+  if (RT_BLOCK(kids[kids.length - 1])) ed.append(rtLine());
+  for (let i = 1; i < kids.length; i++) if (RT_BLOCK(kids[i]) && RT_BLOCK(kids[i - 1])) ed.insertBefore(rtLine(), kids[i]);
+}
+/* the stored copy does not keep those helper lines at the very top / bottom */
+function rtTrimEmpty(html) { return String(html || '').replace(/^(\s*<div><br><\/div>)+/, '').replace(/(<div><br><\/div>\s*)+$/, ''); }
+/* ---------- paste: keep the original format (default) or plain text ---------- */
+let pastePlainOnce = false;
+function richPaste(e) {
+  e.preventDefault();
+  const cd = e.clipboardData || window.clipboardData; if (!cd) return;
+  const html = cd.getData('text/html'), txt = cd.getData('text/plain');
+  const plain = pastePlainOnce || S.settings.pastePlain || !html; pastePlainOnce = false;
+  if (plain) { document.execCommand('insertText', false, txt); return; }
+  const clean = cleanHTML(html.replace(/<!--[\s\S]*?-->/g, '').replace(/^[\s\S]*<body[^>]*>/i, '').replace(/<\/body>[\s\S]*$/i, ''));
+  document.execCommand('insertHTML', false, clean);
+  richEditPrep($('#eDesc')); syncDesc();
+  toast('已保留原本格式貼上', () => { const ed = $('#eDesc'); ed.focus(); document.execCommand('undo'); document.execCommand('insertText', false, txt); syncDesc(); }, '改成純文字', 6000);
+}
+function pasteModeBtn() { const b = $('#rtPasteMode'); if (b) { b.textContent = S.settings.pastePlain ? '貼上：純文字' : '貼上：保留格式'; b.setAttribute('aria-pressed', !S.settings.pastePlain); } }
 function rtCaret() {
   const ed = $('#eDesc'); ed.focus();
   const sel = getSelection();
@@ -3951,8 +4098,14 @@ function initRichEdit() {
   ed.addEventListener('click', e => { if (e.target.closest('summary')) e.preventDefault(); });
   ed.addEventListener('toggle', e => { if (e.target.tagName === 'DETAILS' && !e.target.open) e.target.open = true; }, true);
   ed.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'v' || e.key === 'V')) pastePlainOnce = true;
     const c = caretEl(); const sm = c && c.closest('summary');
     if (sm && e.key === ' ') { e.preventDefault(); document.execCommand('insertText', false, ' '); }
+    else if (sm && e.key === 'Enter' && (() => { const r = getSelection().getRangeAt(0), pre = document.createRange(); pre.selectNodeContents(sm); pre.setEnd(r.startContainer, r.startOffset); return !pre.toString().length; })()) {
+      e.preventDefault(); // Enter at the very start of a fold title: new empty line above the fold
+      const d = sm.closest('details'), line = rtLine(); d.before(line);
+      const r = document.createRange(); r.selectNodeContents(line); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r); syncDesc();
+    }
     else if (sm && e.key === 'Enter') { // Enter in a fold title jumps into the fold's content
       e.preventDefault(); let body = sm.nextElementSibling;
       if (!body) { body = document.createElement('div'); body.innerHTML = '<br>'; sm.after(body); }
@@ -3966,6 +4119,7 @@ Object.assign(ACT, {
   rtHilite: a => rtApply('hilite', a.dataset.c),
   rtLink: () => rtLink(), rtHr: () => rtHr(), rtTable: () => rtTable(), rtFold: () => rtFold(),
   tblRow: () => tblAct('row'), tblCol: () => tblAct('col'), tblDelRow: () => tblAct('delRow'), tblDelCol: () => tblAct('delCol'), tblDel: () => tblAct('del'),
+  rtPasteMode: () => { S.settings.pastePlain = !S.settings.pastePlain; save(); pasteModeBtn(); toast(S.settings.pastePlain ? 'Ctrl + V 會貼上純文字' : 'Ctrl + V 會保留原本的格式（Ctrl + Shift + V 純文字）'); },
   descPrev: () => descStep(-1), descNext: () => descStep(1),
 });
 
@@ -4046,11 +4200,13 @@ function renderLayRow() {
   box.innerHTML = `<button type="button" class="chip pv-btn" data-act="pvToggle" aria-pressed="${!!PV.open}">${pvBtnText()}</button><span class="lay-l">電腦／橫向</span>
     <span class="seg" role="group" aria-label="圖片與說明排列"><button type="button" data-act="eLayM" data-m="v" aria-pressed="${L.m === 'v'}">上下</button><button type="button" data-act="eLayM" data-m="h" aria-pressed="${L.m === 'h'}">左右</button></span>
     <label class="lay-p"><span>圖片</span><input type="range" id="eLayP" min="${LAY_MIN * 100}" max="${LAY_MAX * 100}" step="1" value="${pc}" aria-label="圖片佔的比例"><b class="num" id="eLayV">${pc}%</b></label>
+    <label class="lay-fit">圖片顯示<select id="eFit">${Object.entries(FIT_NAMES).map(([k, n]) => `<option value="${k}" ${(it.imgFit || 'contain') === k ? 'selected' : ''}>${n}${k === 'width' ? '（上下捲動）' : k === 'height' ? '（左右捲動）' : ''}</option>`).join('')}</select></label>
     <button type="button" class="chip" data-act="eLayAll" title="把這個排列和比例套用到本模組所有計時器">套用到全部</button>
     <button type="button" class="chip" data-act="eOrder" title="手機直向畫面各區塊的上下順序（整個模組共用）">手機區塊順序${E.draft.porder && !sameOrder(E.draft.porder, DEF_ORDER) ? ' ✓' : '…'}</button>`;
   editMediaGrid();
 }
 function initLayout() {
+  $('#pEdit').addEventListener('change', e => { if (e.target.id !== 'eFit') return; const it = selItem(); if (!it) return; it.imgFit = e.target.value === 'contain' ? undefined : e.target.value; if (!it.imgFit) delete it.imgFit; markDirty(); imgFitApply($('#eImg'), Object.assign({}, it, { id: '__edit' })); });
   initEditSplit();
   $('#pEdit').addEventListener('input', e => {
     if (e.target.id !== 'eLayP') return;
@@ -4063,7 +4219,7 @@ Object.assign(ACT, {
   eLayM: a => { const it = selItem(); if (!it) return; const L = itemLay(it); if (L.m === a.dataset.m && it.lay) return; it.lay = { m: a.dataset.m, p: L.p }; pvEnsure('pc'); markDirty(); renderLayRow(); },
   eLayAll: () => {
     const it = selItem(); if (!it) return; const L = itemLay(it);
-    E.draft.items.forEach(x => { x.lay = { m: L.m, p: L.p }; }); markDirty();
+    E.draft.items.forEach(x => { x.lay = { m: L.m, p: L.p }; if (it.imgFit) x.imgFit = it.imgFit; else delete x.imgFit; }); markDirty();
     toast(`已套用到 ${E.draft.items.length} 個計時器（${L.m === 'h' ? '左右' : '上下'}，圖片 ${Math.round(L.p * 100)}%），按「儲存」生效`);
   },
   eOrder: async () => {
@@ -4333,7 +4489,7 @@ function slotEditorHTML(it) {
   return Object.keys(SLOT_NAMES).map(k => {
     const l = slotList(it, k), rows = l.length ? l : ['none'];
     return `<div class="slot" data-slot="${k}"><div class="slot-h"><span class="slot-n">${SLOT_NAMES[k]}</span>${l.length > 1 ? `<small>${l.length} 個，第 1 個是預設</small>` : ''}<button type="button" class="slot-add" data-act="slotAdd" data-k="${k}" title="再加一個${SLOT_NAMES[k]}音效（正式使用時可以切換）">＋</button></div>
-      <ol class="slot-list">${rows.map((id, i) => `<li><span class="slot-i num">${l.length > 1 ? i + 1 : ''}</span><select data-sl="${k}" data-i="${i}" aria-label="${SLOT_NAMES[k]}音效 ${i + 1}">${soundOptions(id)}</select>${l.length > 1 ? `<button type="button" data-act="slotMv" data-k="${k}" data-i="${i}" data-d="-1" aria-label="往前" ${i ? '' : 'disabled'}>▲</button><button type="button" data-act="slotMv" data-k="${k}" data-i="${i}" data-d="1" aria-label="往後" ${i < l.length - 1 ? '' : 'disabled'}>▼</button><button type="button" data-act="slotDel" data-k="${k}" data-i="${i}" aria-label="移除">×</button>` : ''}</li>`).join('')}</ol></div>`;
+      <ol class="slot-list">${rows.map((id, i) => `<li><span class="slot-i num">${l.length > 1 ? i + 1 : ''}</span>${sndPickBtn(id, `data-act="sndPickSlot" data-k="${k}" data-i="${i}"`, SLOT_NAMES[k] + '音效 ' + (i + 1))}${l.length > 1 ? `<button type="button" data-act="slotMv" data-k="${k}" data-i="${i}" data-d="-1" aria-label="往前" ${i ? '' : 'disabled'}>▲</button><button type="button" data-act="slotMv" data-k="${k}" data-i="${i}" data-d="1" aria-label="往後" ${i < l.length - 1 ? '' : 'disabled'}>▼</button><button type="button" data-act="slotDel" data-k="${k}" data-i="${i}" aria-label="移除">×</button>` : ''}</li>`).join('')}</ol></div>`;
   }).join('');
 }
 function initSlots() {
@@ -4349,12 +4505,19 @@ function initSlots() {
   $('#pSet').addEventListener('change', e => { if (e.target.id === 'iosBuzzId') { S.settings.iosBuzzId = e.target.value; save(); audio(); synth(e.target.value, .6); } });
 }
 Object.assign(ACT, {
-  slotAdd: a => {
-    const it = selItem(); if (!it) return; const k = a.dataset.k, l = slotList(it, k).slice();
-    const first = S.sounds.find(s => !l.includes(s.id) && s.id !== 'vibrate') || S.sounds[0];
-    l.push(first.id); setSlot(it, k, l); markDirty(); renderEditForm();
-    const sel = document.querySelector(`#eForm select[data-sl="${k}"][data-i="${l.length - 1}"]`); sel && sel.focus();
+  slotAdd: async a => {
+    const it = selItem(); if (!it) return; const k = a.dataset.k;
+    const v = await pickSound({ cur: null, title: `再加一個${SLOT_NAMES[k]}音效` }); if (!v || v === 'none') return;
+    const l = slotList(it, k).slice(); l.push(v); setSlot(it, k, l); markDirty(); renderEditForm();
   },
+  sndPickSlot: async a => {
+    const it = selItem(); if (!it) return; const k = a.dataset.k, i = +a.dataset.i;
+    const l = slotList(it, k).slice();
+    const v = await pickSound({ cur: l[i] || 'none', title: `${SLOT_NAMES[k]}音效${l.length > 1 ? ' ' + (i + 1) : ''}` }); if (v == null) return;
+    if (v === 'none') l.splice(i, 1); else l[i] = v;
+    setSlot(it, k, l); markDirty(); renderEditForm();
+  },
+  sndPickG: async () => { const v = await pickSound({ cur: E.draft.globalSound, title: '全域音效（整個模組一直播放）' }); if (v == null) return; E.draft.globalSound = v; markDirty(); renderEditForm(); },
   slotMv: a => { const it = selItem(); const k = a.dataset.k, i = +a.dataset.i, j = i + +a.dataset.d, l = slotList(it, k).slice(); if (!l[j]) return; [l[i], l[j]] = [l[j], l[i]]; setSlot(it, k, l); markDirty(); renderEditForm(); },
   slotDel: a => { const it = selItem(); const k = a.dataset.k, l = slotList(it, k).slice(); l.splice(+a.dataset.i, 1); setSlot(it, k, l); markDirty(); renderEditForm(); },
   // main screen: switch right now (before or while timing)
@@ -4398,7 +4561,7 @@ function updPhaseTag() {
   if (it && !R.running && R.elapsed === 0 && !R.finished) R.phase = firstPhase(it); // not started yet: follow the settings
   const next = t && t.items[R.idx + 1];
   let k = '', html = '';
-  if (it && !R.finished) {
+  if (it && !R.finished && !PEEK) {
     if (R.phase === 'prep') { k = 'prep'; html = `<span class="pt-l">講解・準備</span><span class="pt-s">接著開始「${esc(it.title || '未命名')}」</span><button type="button" class="pt-b" data-act="phaseSkip">跳過 ▸</button>`; }
     else if (R.phase === 'rest') { k = 'rest'; html = `<span class="pt-l">放鬆休息</span><span class="pt-s">${next ? `下一個：${esc(next.title || '未命名')}` : '這是最後一個'}</span><button type="button" class="pt-b" data-act="phaseSkip">${next ? '跳過 ▸' : '結束'}</button>`; }
     else if (it.mode === 'up' && (R.running || R.elapsed > 0)) { k = 'up'; html = `<button type="button" class="pt-b" data-act="phaseSkip">完成這個動作 ▸${restSec(it) ? ` 休息 ${fmtMS(restSec(it))}` : ''}</button>`; }
@@ -4437,6 +4600,256 @@ Object.assign(ACT, {
     E.draft.items.forEach(x => { x.prep = p; x.rest = r; }); markDirty();
     toast(`已套用到 ${E.draft.items.length} 個計時器（講解 ${fmtMS(p)}、休息 ${fmtMS(r)}），按「儲存」生效`);
   },
+});
+
+/* ================= what the stage shows: running item / next item during rest / peek at other timers (v3.15) ================= */
+let PEEK = null; // { tid, idx } — looking at another 計時器 while the run continues (memory only)
+let QT = null;   // 臨時計時器 { timer, prevId }
+const inProgress = () => !R.finished && (R.running || R.gElapsed > 0);
+const tById = id => (id === '__qt' ? QT && QT.timer : S.timers[id]) || null;
+function viewTimer() { return (PEEK && tById(PEEK.tid)) || curTimer(); }
+function stageView() {
+  const t = viewTimer(); if (!t) return { t: null, it: null, idx: 0 };
+  if (PEEK && tById(PEEK.tid)) return { t, it: t.items[PEEK.idx] || t.items[0], idx: PEEK.idx, peek: true };
+  if (R.phase === 'rest' && !R.finished && t.items[R.idx + 1]) return { t, it: t.items[R.idx + 1], idx: R.idx + 1, next: true }; // rest: show what comes next
+  return { t, it: t.items[R.idx], idx: R.idx };
+}
+const runningTid = () => (QT ? '__qt' : S.currentTimerId);
+function setPeek(tid, idx) {
+  if (tid === runningTid() && idx === R.idx) PEEK = null; else PEEK = { tid, idx };
+  renderItems(); renderStage(); renderGroups();
+}
+/* clicking an item: while a run is in progress it only shows it (the run keeps going) */
+function pickItemView(i) {
+  const vt = viewTimer();
+  if (inProgress()) { setPeek(PEEK ? PEEK.tid : runningTid(), i); return; }
+  selectItem(i);
+}
+function pickTimerView(id) {
+  if (inProgress() && id !== runningTid()) { setPeek(id, 0); toast('只是瀏覽，計時繼續進行；要換成這個請按「改成計時這個」'); return; }
+  if (PEEK) { PEEK = null; renderItems(); renderStage(); renderGroups(); if (id === runningTid()) return; }
+  if (QT) { qtEnd(true); if (id === S.currentTimerId) { renderMain(); return; } }
+  if (id !== S.currentTimerId) selectTimer(id);
+}
+/* make the shown item the one being timed (double-click, or the button in the bar) */
+function switchToView(i, start) {
+  const tid = PEEK ? PEEK.tid : runningTid(), was = R.running || start;
+  PEEK = null;
+  if (tid !== runningTid()) { if (QT && tid !== '__qt') qtEnd(true); selectTimer(tid); }
+  selectItem(i); if (was && !R.running) play();
+  renderGroups();
+}
+
+/* ---------- bar over the image: 瀏覽中 / 臨時計時器 ---------- */
+let barKey = '';
+function updStageBar(force) {
+  const el = $('#stageBar'); if (!el) return;
+  const rt = curTimer(), rit = rt && rt.items[R.idx];
+  let html = '', k = '';
+  if (PEEK) {
+    const ph = R.phase === 'prep' ? '講解' : R.phase === 'rest' ? '休息' : '動作';
+    k = 'peek';
+    html = `<span class="sb-l">瀏覽中・不影響計時</span><span class="sb-run">${R.running ? '計時中' : '已暫停'}：${esc(rt ? rt.name : '')}／${esc(rit ? rit.title || '未命名' : '')}（${ph}）<b class="num">${liveVals().time}</b></span>
+      <button type="button" class="sb-b main" data-act="peekBack">回到計時中的動作</button><button type="button" class="sb-b" data-act="peekSwitch">改成計時這個</button>`;
+  } else if (QT) {
+    k = 'qt'; html = `<span class="sb-l">臨時計時器</span><button type="button" class="sb-b" data-act="qtSave">儲存到計時器模組…</button><button type="button" class="sb-b" data-act="qtEndBtn">結束臨時計時</button>`;
+  }
+  const key = k + '|' + (PEEK ? PEEK.tid + PEEK.idx : '') + '|' + R.idx + R.phase + R.running + '|' + (k === 'peek' ? liveVals().time : '');
+  if (!force && key === barKey) return; barKey = key;
+  el.hidden = !k; el.className = 'stage-bar ' + k; el.innerHTML = html;
+  if (PEEK && R.idx !== updStageBar.lastIdx && updStageBar.lastIdx != null && R.running) { el.classList.add('pulse'); toast(`計時中已換到：${rit ? rit.title || '未命名' : ''}`); }
+  updStageBar.lastIdx = R.idx;
+}
+
+/* ---------- image: 整張 / 填滿寬度（上下捲）/ 填滿高度（左右捲） ---------- */
+const IMGFIT = {}; // this use only
+const FIT_NAMES = { contain: '整張', width: '填滿寬度', height: '填滿高度' };
+const itemFit = it => (IMGFIT[it.id] || it.imgFit || 'contain');
+function imgFitApply(box, it) {
+  const f = it && it.imageId ? itemFit(it) : 'contain';
+  box.classList.toggle('fit-w', f === 'width'); box.classList.toggle('fit-h', f === 'height');
+  box.scrollTop = box.scrollLeft = 0;
+  const b = box.id === 'imgBox' ? $('#imgFitBtn') : null;
+  if (b) { b.hidden = !(it && it.imageId); b.textContent = '⤢ ' + FIT_NAMES[f]; b.title = '切換圖片顯示方式（這次）：整張 → 填滿寬度 → 填滿高度'; }
+}
+
+/* ---------- 臨時計時器 ---------- */
+function qtItemFrom(f) {
+  const it = Object.assign(newItem(1), { id: 'qt-' + uid(), title: f.title || '臨時計時', sec: Math.max(1, f.sec), prep: f.prep || 0, rest: f.rest || 0 });
+  for (const k of ['start', 'during', 'end']) setSlot(it, k, f[k] && f[k] !== 'none' ? [f[k]] : []);
+  return it;
+}
+async function qtOpen() {
+  const last = Object.assign({ title: '臨時計時', sec: 300, prep: 0, rest: 0, start: 'ding', during: 'none', end: 'bowl' }, S.settings.qtLast || {});
+  const f = Object.assign({}, last);
+  const s = document.createElement('div'); s.className = 'scrim';
+  const sndBtn = k => { const x = sndById(f[k]); return `<button type="button" class="snd-pick" data-qk="${k}">${x ? esc(x.name) : '無'} ▾</button>`; };
+  const draw = () => {
+    s.innerHTML = `<div class="dialog qt-dlg" role="dialog" aria-modal="true" aria-label="臨時計時器"><h3>臨時計時器</h3>
+      <label class="fld">名稱<input type="text" id="qtName" maxlength="20" value="${esc(f.title)}"></label>
+      <div class="qt-grid"><label>倒數<input class="num" id="qtSec" value="${fmtMS(f.sec)}" inputmode="numeric"></label><label>前置講解<input class="num" id="qtPrep" value="${fmtMS(f.prep)}" inputmode="numeric"></label><label>完成後休息<input class="num" id="qtRest" value="${fmtMS(f.rest)}" inputmode="numeric"></label></div>
+      <div class="qt-snd"><span>起始</span>${sndBtn('start')}<span>過程</span>${sndBtn('during')}<span>結束</span>${sndBtn('end')}</div>
+      <p class="hint">時間可輸入秒數（90）或 分:秒（1:30）。開始後可以「儲存到計時器模組」留下來。</p>
+      <div class="btns"><button type="button" data-q="cancel">取消</button><button type="button" class="primary" data-q="go">開始</button></div></div>`;
+  };
+  const read = () => {
+    f.title = (s.querySelector('#qtName').value || '').trim() || '臨時計時';
+    const a = parseMS(s.querySelector('#qtSec').value), b = parseMS(s.querySelector('#qtPrep').value), c = parseMS(s.querySelector('#qtRest').value);
+    if (a == null || b == null || c == null || a < 1) { toast('時間請輸入秒數或 分:秒，倒數至少 1 秒'); return false; }
+    f.sec = a; f.prep = b; f.rest = c; return true;
+  };
+  draw(); document.body.append(s);
+  setTimeout(() => { const i = s.querySelector('#qtSec'); i && (i.focus(), i.select()); }, 60);
+  const done = () => s.remove();
+  s.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); done(); } if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); s.querySelector('[data-q=go]').click(); } });
+  s.addEventListener('click', async e => {
+    const pk = e.target.closest('[data-qk]');
+    if (pk) { const vals = { title: s.querySelector('#qtName').value, sec: s.querySelector('#qtSec').value, prep: s.querySelector('#qtPrep').value, rest: s.querySelector('#qtRest').value };
+      const v = await pickSound({ cur: f[pk.dataset.qk], title: '臨時計時器・' + SLOT_NAMES[pk.dataset.qk] + '音效' }); if (v != null) f[pk.dataset.qk] = v;
+      draw(); s.querySelector('#qtName').value = vals.title; s.querySelector('#qtSec').value = vals.sec; s.querySelector('#qtPrep').value = vals.prep; s.querySelector('#qtRest').value = vals.rest; return; }
+    const q = e.target.closest('[data-q]'); if (!q) return;
+    if (q.dataset.q === 'cancel') { done(); return; }
+    if (!read()) return;
+    S.settings.qtLast = Object.assign({}, f); save(); done();
+    qtStart(f);
+  });
+}
+function qtStart(f) {
+  if (inProgress()) { pause(); }
+  const prevId = QT ? QT.prevId : S.currentTimerId;
+  QT = { prevId, timer: { id: '__qt', name: f.title, ratio: 1, globalSound: 'none', items: [qtItemFrom(f)] } };
+  PEEK = null; resetRun(); renderMain(); play();
+}
+function qtEnd(silent) {
+  if (!QT) return; QT = null; PEEK = null; resetRun();
+  if (!silent) { renderMain(); toast('已結束臨時計時'); }
+}
+async function qtSave() {
+  if (!QT) return;
+  const opts = S.groups.map(g => `<optgroup label="${esc(g.name)}">${g.timerIds.map(id => S.timers[id] ? `<option value="${id}" ${id === QT.prevId ? 'selected' : ''}>${esc(S.timers[id].name)}</option>` : '').join('')}<option value="new:${g.id}">＋ 在「${esc(g.name)}」新增計時器模組</option></optgroup>`).join('');
+  const r = await new Promise(res => {
+    const s = document.createElement('div'); s.className = 'scrim';
+    s.innerHTML = `<div class="dialog" role="dialog" aria-modal="true" aria-label="儲存臨時計時器"><h3>儲存到計時器模組</h3><div class="body">「${esc(QT.timer.items[0].title)}」會加在選擇的計時器模組最後面（講解、休息、音效一起保存）。</div>
+      <select id="qtTo" class="pill-text">${opts || '<option value="new:">＋ 新增群組與計時器模組</option>'}</select>
+      <div class="btns"><button type="button" data-r="0">取消</button><button type="button" class="primary" data-r="1">儲存</button></div></div>`;
+    document.body.append(s);
+    s.addEventListener('click', e => { const b = e.target.closest('[data-r]'); if (!b) return; const v = s.querySelector('#qtTo').value; s.remove(); res(b.dataset.r === '1' ? v : null); });
+    s.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); s.remove(); res(null); } });
+  });
+  if (!r) return;
+  const item = clone(QT.timer.items[0]); item.id = uid();
+  let t;
+  if (r.startsWith('new:')) {
+    let g = S.groups.find(x => x.id === r.slice(4));
+    if (!g) { g = { id: uid(), name: '我的群組', timerIds: [], cur: 0 }; S.groups.push(g); }
+    t = { id: uid(), g: g.id, name: QT.timer.name, note: '', ratio: 1, globalSound: 'none', items: [] };
+    S.timers[t.id] = t; g.timerIds.push(t.id); touch(g);
+  } else t = S.timers[r];
+  if (!t) return;
+  t.items.push(item); touch(t); save(); renderGroups();
+  toast(`已加到「${t.name}」（第 ${t.items.length} 個計時器）`);
+}
+Object.assign(ACT, {
+  peekBack: () => { PEEK = null; renderItems(); renderStage(); renderGroups(); },
+  peekSwitch: () => { if (PEEK) switchToView(PEEK.idx, R.running); },
+  imgFitCycle: () => { const it = stageView().it; if (!it) return; const order = ['contain', 'width', 'height']; IMGFIT[it.id] = order[(order.indexOf(itemFit(it)) + 1) % 3]; imgFitApply($('#imgBox'), it); },
+  qtOpen: () => qtOpen(),
+  qtSave: () => qtSave(),
+  qtEndBtn: () => qtEnd(false),
+});
+
+/* ================= sound categories (several per sound, "A/B" = sub-category) + searchable sound picker (v3.15) ================= */
+function sndCats(s) {
+  if (!s) return [];
+  if (Array.isArray(s.cats)) return s.cats;
+  if (s.kind === 'builtin') return [BUZZ[s.id] || s.id === 'vibrate' ? '內建/震動音' : '內建/提示音'];
+  return [];
+}
+const normCat = c => String(c || '').replace(/[／\\]/g, '/').split('/').map(x => x.trim()).filter(Boolean).join('/');
+function catTree() { // [{path, name, depth, n}] sorted as a tree
+  const cnt = new Map();
+  for (const s of S.sounds) {
+    const seen = new Set();
+    for (const c of sndCats(s)) { const parts = c.split('/'); for (let i = 1; i <= parts.length; i++) seen.add(parts.slice(0, i).join('/')); }
+    for (const p of seen) cnt.set(p, (cnt.get(p) || 0) + 1);
+  }
+  return [...cnt.entries()].sort((a, b) => a[0].localeCompare(b[0], 'zh-Hant')).map(([path, n]) => ({ path, n, name: path.split('/').pop(), depth: path.split('/').length - 1 }));
+}
+const inCat = (s, P) => !P || (P === '__none' ? !sndCats(s).length : sndCats(s).some(c => c === P || c.startsWith(P + '/')));
+function sndPickBtn(id, attrs, label) {
+  const s = sndById(id), i = sndIndex(id);
+  return `<button type="button" class="snd-pick" ${attrs} aria-label="${esc(label)}：${s ? esc(s.name) : '無'}" title="${s ? esc(s.name) + (sndCats(s).length ? '（' + esc(sndCats(s).join('、')) + '）' : '') : '無'}"><span>${s ? (i + 1) + '.' + esc(s.name) : '無'}</span><b>▾</b></button>`;
+}
+
+/* picker: search + category tree + list with ▶ preview; resolves to a sound id, 'none', or null (cancel) */
+function pickSound({ cur, title }) {
+  return new Promise(res => {
+    const s = document.createElement('div'); s.className = 'scrim';
+    let cat = S.settings.pickCat || '', q = '', act = -1;
+    if (cat && cat !== '__none' && !catTree().some(x => x.path === cat)) cat = '';
+    s.innerHTML = `<div class="dialog sp-dlg" role="dialog" aria-modal="true" aria-label="${esc(title)}"><h3>${esc(title)}</h3>
+      <div class="sp-search">${I.search}<input type="search" id="spQ" placeholder="搜尋名稱、檔名或分類" autocomplete="off"></div>
+      <div class="sp-body"><div class="sp-cats" role="tree" aria-label="分類"></div><div class="sp-list" role="listbox" aria-label="音效"></div></div>
+      <div class="btns"><span class="sp-n muted"></span><button type="button" data-sp="cancel">取消</button></div></div>`;
+    document.body.append(s);
+    const cats = s.querySelector('.sp-cats'), list = s.querySelector('.sp-list'), inp = s.querySelector('#spQ');
+    const close = v => { stopPv(); s.remove(); res(v); };
+    const drawCats = () => {
+      const tree = catTree(), none = S.sounds.filter(x => !sndCats(x).length).length;
+      cats.innerHTML = `<button type="button" data-cat="" aria-selected="${!cat}">全部 <small>${S.sounds.length}</small></button>` +
+        tree.map(c => `<button type="button" data-cat="${esc(c.path)}" aria-selected="${cat === c.path}" style="padding-left:${10 + c.depth * 14}px">${c.depth ? '└ ' : ''}${esc(c.name)} <small>${c.n}</small></button>`).join('') +
+        (none ? `<button type="button" data-cat="__none" aria-selected="${cat === '__none'}">未分類 <small>${none}</small></button>` : '');
+    };
+    let rows = [];
+    const drawList = () => {
+      const ts = terms(q);
+      rows = S.sounds.filter(x => inCat(x, cat) && (!ts.length || hit(x.name, ts) || hit(x.fileName, ts) || hit(sndCats(x).join(' '), ts)));
+      const cell = x => { const i = sndIndex(x.id); return `<div class="sp-row ${x.id === cur ? 'cur' : ''}" role="option" data-id="${x.id}" aria-selected="${x.id === cur}"><button type="button" class="sp-play" data-play="${x.id}" aria-label="試聽 ${esc(x.name)}">${I.play}</button><span class="sp-name"><b>${i + 1}.${esc(x.name)}</b><small>${esc(sndCats(x).join('、') || (x.fileName || ''))}</small></span>${x.id === cur ? '<span class="sp-ck">✓</span>' : ''}</div>`; };
+      list.innerHTML = (!ts.length ? `<div class="sp-row none ${!cur || cur === 'none' ? 'cur' : ''}" role="option" data-id="none"><span class="sp-play blank"></span><span class="sp-name"><b>無</b><small>不播放（多個時會移除這一個）</small></span></div>` : '') +
+        (rows.map(cell).join('') || '<p class="hint" style="padding:10px">沒有符合的音效</p>');
+      s.querySelector('.sp-n').textContent = `${rows.length} 個音效`;
+      act = -1;
+    };
+    drawCats(); drawList();
+    setTimeout(() => { inp.focus(); const c = list.querySelector('.cur'); c && c.scrollIntoView({ block: 'center' }); }, 60);
+    inp.addEventListener('input', () => { q = inp.value; drawList(); });
+    s.addEventListener('click', e => {
+      const p = e.target.closest('[data-play]');
+      if (p) { e.stopPropagation(); audio(); stopPv(); const x = sndById(p.dataset.play); if (x) { if (x.id === 'vibrate') haptic(); else playTimes(x, 1, 1, pvSources); } return; }
+      const c = e.target.closest('[data-cat]'); if (c) { cat = c.dataset.cat; S.settings.pickCat = cat; drawCats(); drawList(); inp.focus(); return; }
+      const r = e.target.closest('.sp-row'); if (r) { close(r.dataset.id); return; }
+      if (e.target.closest('[data-sp=cancel]') || e.target === s) close(null);
+    });
+    s.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { e.stopPropagation(); close(null); return; }
+      const all = [...list.querySelectorAll('.sp-row')];
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); act = clamp(act + (e.key === 'ArrowDown' ? 1 : -1), 0, all.length - 1); all.forEach((x, i) => x.classList.toggle('act', i === act)); all[act] && all[act].scrollIntoView({ block: 'nearest' }); }
+      if (e.key === 'Enter') { e.preventDefault(); const r = all[act >= 0 ? act : (q ? 0 : -1)]; if (r) close(r.dataset.id); }
+    });
+  });
+}
+
+/* ---------- settings: edit a sound's categories, filter the list by category ---------- */
+function catEditHTML(s) {
+  const cs = sndCats(s);
+  return `<div class="cat-ed"><span class="cat-l">分類</span><span class="cat-chips">${cs.map((c, i) => `<span class="cat-chip">${esc(c)}<button type="button" data-act="catDel" data-i="${i}" aria-label="移除分類 ${esc(c)}">×</button></span>`).join('') || '<span class="muted">未分類</span>'}</span>
+    <span class="cat-add"><input id="catIn" list="catList" placeholder="新分類，用 / 分層：冥想/頌缽" autocomplete="off"><datalist id="catList">${catTree().map(c => `<option value="${esc(c.path)}">`).join('')}</datalist><button type="button" class="chip" data-act="catAdd">加入</button></span></div>
+    <p class="hint">一個音效可以放在多個分類；「冥想/頌缽」表示「冥想」底下的「頌缽」。選音效時可以依分類瀏覽或搜尋。</p>`;
+}
+function catSet(s, cs) { s.cats = [...new Set(cs.map(normCat).filter(Boolean))]; touch(s); save(); renderSettings(); }
+function sCatOptions() {
+  const sel = $('#sCat'); if (!sel) return;
+  const v = sel.value, tree = catTree();
+  sel.innerHTML = '<option value="">全部分類</option>' + tree.map(c => `<option value="${esc(c.path)}">${'　'.repeat(c.depth)}${esc(c.name)}（${c.n}）</option>`).join('') + '<option value="__none">未分類</option>';
+  sel.value = [...sel.options].some(o => o.value === v) ? v : '';
+}
+function initSndCat() {
+  $('#pSet').addEventListener('keydown', e => { if (e.target.id === 'catIn' && e.key === 'Enter') { e.preventDefault(); ACT.catAdd(); } });
+  $('#sCat').addEventListener('change', () => filterSounds());
+}
+Object.assign(ACT, {
+  catAdd: () => { const s = sndById(SV.sel), inp = $('#catIn'); if (!s || !inp) return; const v = normCat(inp.value); if (!v) { inp.focus(); return; } catSet(s, [...sndCats(s), v]); setTimeout(() => { const i = $('#catIn'); i && i.focus(); }, 0); },
+  catDel: a => { const s = sndById(SV.sel); if (!s) return; const cs = sndCats(s).slice(); cs.splice(+a.dataset.i, 1); catSet(s, cs); },
 });
 
 /* ================= boot ================= */
