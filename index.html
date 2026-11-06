@@ -949,6 +949,39 @@ span.tag{cursor:default}
 .use-list{display:flex;flex-direction:column;gap:4px}
 .use-row{display:flex;justify-content:space-between;gap:10px;background:var(--white);border-radius:10px;padding:6px 10px;font-size:14px;text-align:left}
 .use-row span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ================= v3.19 3D 人體圖 ================= */
+.media > .lay-wrap{grid-area:lay;display:flex;flex-direction:column;gap:8px;margin-bottom:12px;min-width:0}
+.lay-wrap > .lay-row{margin:0}
+.body-row{display:flex;align-items:center;gap:10px;font-size:13px;background:var(--panel-2);border-radius:14px;padding:6px 10px;flex-wrap:wrap}
+.body-row:empty{display:none}
+.body-row .body-add{box-shadow:none;background:var(--white)}
+.body-mini{width:54px;height:54px;object-fit:cover;border-radius:10px;background:var(--white);flex:none}
+.body-info{display:flex;flex-direction:column;gap:4px;flex:1;min-width:180px}
+.body-info b small{font-weight:400;color:var(--ink-soft);margin-left:8px}
+.body-opts{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center}
+.body-opts label{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.body-btns{display:flex;gap:6px}
+.body-btns .chip{box-shadow:none;background:var(--white)}
+.body-box{position:absolute;z-index:2;border-radius:18px;overflow:hidden;background:var(--white)}
+.body-box[hidden]{display:none}
+.body-box .body-thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.body-box iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent;opacity:0;transition:opacity .3s}
+.body-box.live iframe{opacity:1}
+.body-box.live .body-thumb{visibility:hidden}
+.body-btn{position:absolute;left:16px;bottom:16px;z-index:3;background:rgba(255,255,255,.85);border-radius:14px;padding:5px 10px;font-size:12px;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.body-btn[hidden]{display:none}
+.body-ed{position:fixed;inset:0;z-index:60;background:var(--bg,#f3f3ee);display:flex;flex-direction:column}
+.be-top{display:flex;align-items:center;gap:8px;padding:8px max(10px,env(safe-area-inset-right,0px)) 8px max(10px,env(safe-area-inset-left,0px));padding-top:max(8px,env(safe-area-inset-top,0px));background:var(--panel);flex-wrap:wrap}
+.be-t{font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:40vw}
+.be-tpl{border-radius:10px;padding:6px 8px;border:1px solid rgba(0,0,0,.15);background:var(--white);max-width:46vw}
+.be-sp{flex:1}
+.be-btn{border-radius:12px;padding:7px 14px;background:var(--white);border:1px solid rgba(0,0,0,.12);font-weight:700}
+.be-btn.pri{background:var(--green,#2f6519);color:#fff;border-color:transparent}
+.be-body{position:relative;flex:1;min-height:0}
+.be-body iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.be-wait{position:absolute;inset:0;display:grid;place-items:center;color:var(--ink-soft);pointer-events:none}
+.be-wait[hidden]{display:none}
 </style></head><body>
 <div class="app" id="app"></div>
 <div class="flash" id="flash"></div>
@@ -1518,7 +1551,7 @@ function buildShell() {
   <section class="stage">
     <div class="stage-head"><div class="title-pill" id="title"></div>
       <div class="timebox" id="timebox"><button class="time-pill num" id="time" data-act="toggle" aria-label="開始或暫停"></button><div class="count-pill num" id="count"></div></div></div>
-    <div class="image-wrap" id="imgWrap"><div class="image-box" id="imgBox"></div><div class="stage-ov"><div class="stage-bar" id="stageBar" hidden></div><div class="phase-tag" id="phaseTag" hidden></div></div><button type="button" class="img-fit-btn" id="imgFitBtn" data-act="imgFitCycle" hidden></button></div>
+    <div class="image-wrap" id="imgWrap"><div class="image-box" id="imgBox"></div><div class="stage-ov"><div class="stage-bar" id="stageBar" hidden></div><div class="phase-tag" id="phaseTag" hidden></div></div><button type="button" class="img-fit-btn" id="imgFitBtn" data-act="imgFitCycle" hidden></button><div class="body-box" id="bodyBox" hidden><img class="body-thumb" alt=""></div><button type="button" class="body-btn" id="bodyBtn" data-act="bodyToggle" hidden></button></div>
     <div class="splitter" id="split" role="separator" aria-orientation="horizontal" aria-label="拖曳調整圖片與說明的大小（只影響這次）" tabindex="0"><span></span><div class="sp-btns"><button type="button" class="sp-b" id="splitFlip" data-act="layFlip">⇆</button><button type="button" class="sp-b" id="splitRst" data-act="layReset" title="回到編輯時設定的比例" hidden>↺</button></div></div>
     <div class="desc" id="desc" role="region" aria-labelledby="descH"><div class="desc-h" id="descH">說明<span class="desc-nav" id="descNav" hidden><button type="button" data-act="descPrev" aria-label="上一欄">◀</button><span class="num" id="descPg"></span><button type="button" data-act="descNext" aria-label="下一欄">▶</button></span></div><div class="desc-body rich" id="descText"></div></div>
   </section>
@@ -1550,7 +1583,7 @@ function buildShell() {
   <div class="edit-head"><input class="name-input" id="eName" maxlength="30" aria-label="計時器名稱"><button type="button" class="note-btn" data-act="noteDlg" title="模組說明（Alt + M）"><span>模組說明</span><b id="eNoteN"></b></button><button class="sort-btn keys-btn" data-act="keys" title="快捷鍵（F1）" aria-label="快捷鍵清單">${I.keys}</button><button class="save-btn" data-act="save">儲存</button></div>
   <div class="edit-list"><div class="edit-items" id="eItems"></div><button class="add-item" data-act="addItem">${I.plus}新增計時項目</button><button class="add-item copy-item" data-act="clipItem" title="複製目前選取的計時器（${MOD} + C），再到任何模組按「貼上計時器」">${IC_COPY}<span>複製這個計時器</span></button><button class="add-item paste-item" id="ePaste" data-act="pasteItems" hidden>${IC_COPY}<span>貼上計時器</span></button><p class="hint" id="eHint"></p></div>
   <div class="form" id="eForm"></div>
-  <div class="media"><div class="lay-row" id="eLay"></div><div class="image-box" id="eImg" data-act="pickImg" role="button" tabindex="0" aria-label="選擇圖片"></div>
+  <div class="media"><div class="lay-wrap"><div class="lay-row" id="eLay"></div><div class="body-row" id="eBody"></div></div><div class="image-box" id="eImg" data-act="pickImg" role="button" tabindex="0" aria-label="選擇圖片"></div>
     <div class="splitter e-split" id="eSplit" role="separator" aria-orientation="horizontal" aria-label="拖曳調整圖片與說明的比例（這個計時器的預設）" tabindex="0"><span></span></div>
     <div class="desc-edit"><span class="de-label" id="eDescLbl">說明區塊</span>
       <div class="rt-bar" role="toolbar" aria-label="選取文字後設定格式">
@@ -1636,12 +1669,14 @@ function renderStage() {
   const box = $('#imgBox'), want = it && it.imageId;
   box.dataset.img = want || '';
   imgFitApply(box, it);
-  if (want) mediaURL(want).then(u => { if (box.dataset.img === want) box.innerHTML = u ? `<img src="${u}" alt="${esc(it.title)}">` : ph(); });
+  if (bodyStage(it)) { $('#imgFitBtn').hidden = true; if (want) mediaURL(want).then(u => { if (box.dataset.img === want) box.innerHTML = u ? `<img src="${u}" alt="${esc(it.title)}">` : ph(); }); else box.innerHTML = ''; }
+  else if (want) mediaURL(want).then(u => { if (box.dataset.img === want) box.innerHTML = u ? `<img src="${u}" alt="${esc(it.title)}">` : ph(); });
   else box.innerHTML = ph(t ? '點左側計時器的鉛筆，可以為這個項目加入圖片' : '按左側「＋」新增計時器');
   updateLive(); renderDrawers(); applySplit(); updStageBar(true);
 }
 const ph = (msg = '找不到圖片') => `<div class="placeholder">${I.pose}<span>${esc(msg)}</span></div>`;
 function renderControls() {
+  const sv = stageView().it; bodySpin(!!(sv && sv.body && sv.body.spin && bodyOn(sv)) && R.running);
   const b = $('#playBtn'); b.innerHTML = R.running ? I.pause : I.play; b.setAttribute('aria-label', R.running ? '暫停' : '開始');
 }
 function updateLive() {
@@ -2036,6 +2071,7 @@ function renderEditMedia() {
   $('#eDesc').innerHTML = it ? (it.descHtml ? cleanHTML(it.descHtml) : esc(it.desc || '').replace(/\n/g, '<br>')) : ''; richEditPrep($('#eDesc')); dhInit();
   const want = it && it.imageId; box.dataset.img = want || '';
   const actions = want ? `<div class="img-actions"><span class="chip" data-act="pickImg">編輯排版</span><span class="chip" data-act="imgRemove">移除</span></div>` : '';
+  bodyEditRow();
   if (want) mediaURL(want).then(u => { if (box.dataset.img === want) box.innerHTML = (u ? `<img src="${u}" alt="">` : ph()) + actions; });
   else box.innerHTML = `<div class="placeholder">${I.pose}<span>點這裡排版圖片：可放多張圖、加文字、畫重點</span></div>`;
 }
@@ -2235,7 +2271,7 @@ async function takeSoundFile(file, target) {
 
 /* ================= backup & sync core ================= */
 const SYNC_FILE = '瑜珈計時器-同步.json';
-const PREF_KEYS = ['soundMode', 'fadeIn', 'fadeOut', 'longPress'];
+const PREF_KEYS = ['soundMode', 'fadeIn', 'fadeOut', 'longPress', 'bodyTpls'];
 const TOMB_DAYS = 90;
 const blobToDataURL = b => new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.onerror = () => r(null); f.readAsDataURL(b); });
 function dataURLToBlob(d) {
@@ -2245,7 +2281,8 @@ function dataURLToBlob(d) {
 }
 function referencedMedia(state) {
   const ids = new Set();
-  for (const t of Object.values(state.timers)) for (const it of t.items) { if (it.imageId) ids.add(it.imageId); if (it.scene && it.scene.media) it.scene.media.forEach(m => ids.add(m)); }
+  for (const t of Object.values(state.timers)) for (const it of t.items) { if (it.imageId) ids.add(it.imageId); if (it.scene && it.scene.media) it.scene.media.forEach(m => ids.add(m)); if (it.body && it.body.thumb) ids.add(it.body.thumb); }
+  for (const b of (state.settings && state.settings.bodyTpls) || []) if (b.thumb) ids.add(b.thumb);
   for (const s of state.sounds || []) if (s.mediaId) ids.add(s.mediaId);
   return ids;
 }
@@ -2575,7 +2612,7 @@ const fmtTime = ts => ts ? new Date(ts).toLocaleString('zh-TW', { month: 'numeri
 
 /* ================= delete: long-press / swipe / multi-select ================= */
 let SEL = null; // { kind, ctx, keys:Set }
-const APP_VER = '3.18';
+const APP_VER = '3.19';
 let swallowClick = false;
 const KIND_LABEL = { group: '群組', timer: '計時器模組', item: '計時器', sound: '音效' };
 function delName(kind, key) {
@@ -2838,7 +2875,7 @@ function bindEvents() {
     if (e.key === 'Escape') { if (SEL) exitSelect(); else if (SORT) exitSort(); else if (openDrawer) closeDrawers(); else if (page !== 'main') goBack(); else closeMenu(); }
   });
   document.addEventListener('pointerdown', e => { if (openDrawer && !e.target.closest('.ftab,.fpanel,.scrim,.toast')) closeDrawers(); }, true);
-  initRichView(); initRichEdit(); initLayout(); initSlots(); initPhase(); initSndCat(); initRatioFit(); initDescHist();
+  initRichView(); initRichEdit(); initLayout(); initSlots(); initPhase(); initBody(); initSndCat(); initRatioFit(); initDescHist();
   const ri = $('#ratioInput');
   ri.addEventListener('focus', () => { const t = curTimer(); ri.value = (t ? t.ratio || 1 : 1).toFixed(2); ri.select(); });
   ri.addEventListener('change', () => setRatio(parseFloat(ri.value)));
@@ -4603,6 +4640,7 @@ function updPhaseTag() {
   }
   const key = k + '|' + R.idx + '|' + (it && it.id) + '|' + (t && t.id);
   const tb = $('#timebox'); tb.classList.toggle('ph-prep', k === 'prep'); tb.classList.toggle('ph-rest', k === 'rest');
+  if (k === 'prep' && R.running) bodySpeak(it); else if (k !== 'prep') bodySaid = '';
   if (key === phaseKey) return; phaseKey = key;
   el.hidden = !k; el.className = 'phase-tag ' + k; el.innerHTML = html;
 }
@@ -5089,6 +5127,182 @@ async function renderUsage() {
 async function soundSize(s) {
   const el = $('#sSize'); if (!el || !s || !s.mediaId) return;
   const b = await Store.getMedia(s.mediaId); if ($('#sSize')) el.textContent = b ? '檔案大小 ' + fmtMB(b.size) : '';
+}
+
+/* ================= 人體圖：3D 解剖畫面接進計時器 (v3.19) =================
+   item.body = { cfg, thumb, say, tpl, show: 'body'|'img', spin, speak }
+   - cfg: the saved anatomy view (layers, hidden/faded parts, marks 伸展/收縮/放鬆, camera); thumb: JPEG media id
+   - tpl: id of a 人體範本 in S.settings.bodyTpls (then cfg/thumb/say come from the template, so editing it updates every linked timer)
+   The 3D page lives in ./anatomy/ and talks to the timer with postMessage (same site). */
+const BODY_URL = 'anatomy/index.html';
+const BODY = { fr: null, ready: false, key: '', cfg: null, live: false, flip: new Set(), ed: null, spin: false };
+const bodyTpls = () => (Array.isArray(S.settings.bodyTpls) ? S.settings.bodyTpls : (S.settings.bodyTpls = []));
+function bodyOf(it) {
+  const b = it && it.body; if (!b) return null;
+  const t = b.tpl && bodyTpls().find(x => x.id === b.tpl);
+  if (t) return { cfg: t.cfg, thumb: t.thumb, say: t.say, name: t.name };
+  return b.cfg ? { cfg: b.cfg, thumb: b.thumb, say: b.say } : null;
+}
+function bodyOn(it) { // show the 3D view (instead of the picture) for this item right now?
+  if (!bodyOf(it)) return false;
+  let on = it.body.show !== 'img' || !it.imageId;
+  if (BODY.flip.has(it.id) && it.imageId) on = !on;
+  return on;
+}
+const bodyKey = cfg => JSON.stringify(cfg || null);
+
+/* ---------- main screen ---------- */
+function bodyFit() { // keep the 3D box exactly over the picture area
+  const box = $('#bodyBox'), img = $('#imgBox'); if (!box || !img) return;
+  Object.assign(box.style, { left: img.offsetLeft + 'px', top: img.offsetTop + 'px', width: img.offsetWidth + 'px', height: img.offsetHeight + 'px' });
+}
+function bodyStage(it) { // from renderStage; true = the 3D view (or its picture) covers the image area
+  const box = $('#bodyBox'), btn = $('#bodyBtn'); if (!box) return false;
+  const b = bodyOf(it), on = !!it && bodyOn(it);
+  btn.hidden = !(b && it.imageId); if (!btn.hidden) { btn.textContent = on ? '🖼 看圖片' : '🧍 看人體'; btn.title = '這次切換顯示圖片或 3D 人體圖'; }
+  box.hidden = !on;
+  if (!on) { bodySpin(false); return false; }
+  bodyFit();
+  const th = box.querySelector('.body-thumb');
+  if (b.thumb) mediaURL(b.thumb).then(u => { if (u && th.dataset.id !== b.thumb) { th.src = u; th.dataset.id = b.thumb; } }); else th.removeAttribute('src');
+  const key = bodyKey(b.cfg);
+  if (!BODY.fr && navigator.onLine !== false) {
+    const f = document.createElement('iframe'); f.title = '3D 人體圖'; f.src = BODY_URL + '?embed=view'; f.setAttribute('allow', 'fullscreen');
+    box.append(f); BODY.fr = f; BODY.ready = false;
+  }
+  if (key !== BODY.key) { BODY.key = key; BODY.cfg = b.cfg; BODY.live = false; box.classList.remove('live'); bodySend(); }
+  bodySpin(!!(it.body && it.body.spin) && R.running);
+  return true;
+}
+function bodySend() { if (BODY.fr && BODY.ready && BODY.cfg) BODY.fr.contentWindow.postMessage({ type: 'anat-load', cfg: BODY.cfg, key: BODY.key }, location.origin); }
+function bodySpin(on) { if (on === BODY.spin) return; BODY.spin = on; if (BODY.fr && BODY.ready) BODY.fr.contentWindow.postMessage({ type: 'anat-spin', on }, location.origin); }
+/* 講解時間：朗讀標記的部位 */
+let bodySaid = '';
+function bodySpeak(it) {
+  const b = bodyOf(it); if (!b || !b.say || !it.body.speak || S.settings.soundMode === 'mute' || !('speechSynthesis' in window)) return;
+  const k = it.id + '|' + R.idx; if (bodySaid === k) return; bodySaid = k;
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(b.say); u.lang = 'zh-TW'; u.rate = .95; speechSynthesis.speak(u); } catch {}
+}
+
+/* ---------- messages from the 3D pages ---------- */
+window.addEventListener('message', e => {
+  if (e.origin !== location.origin || !e.data) return; const d = e.data;
+  if (BODY.fr && e.source === BODY.fr.contentWindow) {
+    if (d.type === 'anat-ready') { BODY.ready = true; bodySend(); BODY.spin = !BODY.spin; bodySpin(!BODY.spin); }
+    if (d.type === 'anat-loaded' && d.key === BODY.key) { BODY.live = true; $('#bodyBox').classList.add('live'); }
+    if (d.type === 'anat-key') { // keyboard shortcuts keep working after clicking the 3D view
+      const ev = new KeyboardEvent('keydown', { key: d.key, code: d.code, ctrlKey: d.ctrlKey, metaKey: d.metaKey, shiftKey: d.shiftKey, altKey: d.altKey, bubbles: true, cancelable: true });
+      document.body.dispatchEvent(ev);
+    }
+  }
+  const ed = BODY.ed;
+  if (ed && e.source === ed.fr.contentWindow) {
+    if (d.type === 'anat-ready') { ed.ready = true; ed.fr.contentWindow.postMessage({ type: 'anat-load', cfg: ed.start, key: 'ed' }, location.origin); }
+    if (d.type === 'anat-loaded') ed.root.querySelector('.be-wait').hidden = true;
+    if (d.type === 'anat-cfg' && ed.wait && ed.wait.id === d.id) { const w = ed.wait; ed.wait = null; w.res(d); }
+  }
+});
+window.addEventListener('online', () => { if (page === 'main') renderStage(); });
+
+/* ---------- edit page: the 人體圖 row under 排版 ---------- */
+function bodyEditRow() {
+  const el = $('#eBody'); if (!el) return;
+  const it = selItem(); if (!it) { el.innerHTML = ''; return; }
+  const b = bodyOf(it);
+  if (!b) { el.innerHTML = `<button type="button" class="chip body-add" data-act="bodyEdit">🧍 加入 3D 人體圖</button>`; return; }
+  el.innerHTML = `<img class="body-mini" alt="" id="eBodyMini"><div class="body-info"><b>3D 人體圖${b.name ? `<small>範本：${esc(b.name)}</small>` : ''}</b>
+    <div class="body-opts">${it.imageId ? `<span class="seg" role="group" aria-label="計時時先顯示"><button type="button" data-act="bodyShow" data-v="body" aria-pressed="${it.body.show !== 'img'}">先顯示人體</button><button type="button" data-act="bodyShow" data-v="img" aria-pressed="${it.body.show === 'img'}">先顯示圖片</button></span>` : ''}
+    <label><input type="checkbox" data-bopt="spin" ${it.body.spin ? 'checked' : ''}> 計時中慢慢旋轉</label>
+    <label title="${esc(b.say || '還沒有標記伸展、收縮或放鬆的部位')}"><input type="checkbox" data-bopt="speak" ${it.body.speak ? 'checked' : ''} ${b.say ? '' : 'disabled'}> 講解時朗讀標記的部位</label></div></div>
+    <div class="body-btns"><button type="button" class="chip" data-act="bodyEdit">編輯</button><button type="button" class="chip" data-act="bodyRemove">移除</button></div>`;
+  if (b.thumb) mediaURL(b.thumb).then(u => { const m = $('#eBodyMini'); if (m && u) m.src = u; });
+}
+
+/* ---------- full-screen editor (needs internet) ---------- */
+function bodyEditor() {
+  const it = selItem(); if (!it) return;
+  if (navigator.onLine === false) { toast('編輯 3D 人體圖需要網路；設定好之後，看過的部位離線也能顯示'); return; }
+  const b = bodyOf(it), root = document.createElement('div'); root.className = 'body-ed'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', '編輯 3D 人體圖');
+  root.innerHTML = `<div class="be-top"><b class="be-t">人體圖：${esc(it.title || '未命名')}</b>
+    <select class="be-tpl" aria-label="人體範本"></select>
+    <span class="be-sp"></span><button type="button" class="be-btn" data-be="cancel">取消</button><button type="button" class="be-btn pri" data-be="done">完成</button></div>
+    <div class="be-body"><iframe title="3D 人體圖編輯" src="${BODY_URL}?embed=edit"></iframe><div class="be-wait">正在打開 3D 人體圖…</div></div>`;
+  document.body.append(root);
+  const ed = BODY.ed = { root, fr: root.querySelector('iframe'), it, start: b ? b.cfg : null, tpl: it.body && it.body.tpl || '', ready: false, wait: null };
+  bodyTplSelect();
+  const close = () => { root.remove(); BODY.ed = null; document.removeEventListener('keydown', onKey, true); };
+  const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
+  document.addEventListener('keydown', onKey, true);
+  root.querySelector('.be-tpl').addEventListener('change', async e => {
+    const v = e.target.value; e.target.value = '';
+    if (v === '__save') { await bodyTplSave(); return; }
+    if (v === '__unlink') { ed.tpl = ''; bodyTplSelect(); toast('已取消連結範本，接下來的修改只影響這個計時器'); return; }
+    const t = bodyTpls().find(x => x.id === v); if (!t) return;
+    ed.tpl = t.id; bodyTplSelect(); root.querySelector('.be-wait').hidden = false;
+    ed.fr.contentWindow.postMessage({ type: 'anat-load', cfg: t.cfg, key: 'ed' }, location.origin);
+  });
+  root.addEventListener('click', async e => {
+    const k = e.target.dataset && e.target.dataset.be; if (!k) return;
+    if (k === 'cancel') return close();
+    if (!ed.ready) { toast('人體圖還在載入'); return; }
+    const d = await bodyAsk(); if (!d) return;
+    const thumb = await bodyThumb(d.thumb);
+    const t = ed.tpl && bodyTpls().find(x => x.id === ed.tpl);
+    const keep = it.body ? { show: it.body.show, spin: it.body.spin, speak: it.body.speak } : { show: 'body', spin: false, speak: !!d.say };
+    if (t) {
+      if (bodyKey(t.cfg) !== bodyKey(d.cfg)) {
+        const n = bodyUses(t.id);
+        const r = await dialog({ title: `要更新範本「${t.name}」嗎？`, body: `有 ${n} 個計時器使用這個範本${n > 1 ? '，更新後會一起改變' : ''}。`, buttons: [{ label: '只改這個計時器', value: 'one' }, { label: '更新範本', value: 'tpl', primary: true }] });
+        if (!r.value) return;
+        if (r.value === 'one') { it.body = Object.assign(keep, { cfg: d.cfg, thumb, say: d.say }); markDirty(); close(); bodyEditRow(); return; }
+        Object.assign(t, { cfg: d.cfg, thumb, say: d.say, u: Date.now() }); touchPrefs(); save();
+      }
+      it.body = Object.assign(keep, { tpl: t.id, cfg: t.cfg, thumb: t.thumb, say: t.say }); // keep a copy in case the template is deleted
+    } else it.body = Object.assign(keep, { cfg: d.cfg, thumb, say: d.say });
+    markDirty(); close(); bodyEditRow();
+  });
+}
+function bodyAsk() { // ask the editor page for its current view
+  const ed = BODY.ed; if (!ed) return Promise.resolve(null);
+  return new Promise(res => {
+    const id = uid(); ed.wait = { id, res };
+    ed.fr.contentWindow.postMessage({ type: 'anat-get', id }, location.origin);
+    setTimeout(() => { if (ed.wait && ed.wait.id === id) { ed.wait = null; toast('人體圖沒有回應，請再按一次'); res(null); } }, 8000);
+  });
+}
+async function bodyThumb(dataURL) { if (!dataURL) return null; const id = uid(); await Store.putMedia(id, dataURLToBlob(dataURL)); return id; }
+const bodyUses = tid => { // timers using a template (the one being edited counts with its unsaved changes)
+  let n = 0; const d = E.draft;
+  for (const t of Object.values(S.timers)) if (!d || t.id !== d.id) for (const x of t.items) if (x.body && x.body.tpl === tid) n++;
+  if (d) for (const x of d.items) if (x.body && x.body.tpl === tid) n++;
+  return Math.max(1, n);
+};
+function bodyTplSelect() {
+  const ed = BODY.ed; if (!ed) return; const sel = ed.root.querySelector('.be-tpl'), cur = bodyTpls().find(x => x.id === ed.tpl);
+  sel.innerHTML = `<option value="">${cur ? '範本：' + esc(cur.name) : '人體範本…'}</option>` + bodyTpls().map(t => `<option value="${t.id}">套用「${esc(t.name)}」</option>`).join('') +
+    '<option value="__save">把目前畫面存成新範本…</option>' + (cur ? '<option value="__unlink">取消連結範本（只改這個計時器）</option>' : '');
+}
+async function bodyTplSave() {
+  const ed = BODY.ed; if (!ed || !ed.ready) return;
+  const name = await ask('範本名稱（例如：腿後側伸展）', ed.it.title || ''); if (!name) return;
+  const d = await bodyAsk(); if (!d) return;
+  const t = { id: uid(), name, cfg: d.cfg, thumb: await bodyThumb(d.thumb), say: d.say, u: Date.now() };
+  bodyTpls().push(t); ed.tpl = t.id; touchPrefs(); save(); bodyTplSelect();
+  toast(`已存成範本「${name}」，其他計時器可以在這裡套用`);
+}
+
+Object.assign(ACT, {
+  bodyEdit: () => bodyEditor(),
+  bodyRemove: () => { const it = selItem(); if (!it) return; delete it.body; markDirty(); bodyEditRow(); },
+  bodyShow: a => { const it = selItem(); if (!it || !it.body) return; it.body.show = a.dataset.v; markDirty(); bodyEditRow(); },
+  bodyToggle: () => { const it = stageView().it; if (!it) return; BODY.flip.has(it.id) ? BODY.flip.delete(it.id) : BODY.flip.add(it.id); renderStage(); },
+});
+function initBody() {
+  $('#pEdit').addEventListener('change', e => {
+    const k = e.target.dataset && e.target.dataset.bopt; if (!k) return;
+    const it = selItem(); if (!it || !it.body) return; it.body[k] = e.target.checked; markDirty();
+  });
+  const img = $('#imgBox'); if (img && 'ResizeObserver' in window) new ResizeObserver(bodyFit).observe(img);
 }
 
 /* ================= boot ================= */

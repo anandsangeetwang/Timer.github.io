@@ -75,6 +75,21 @@ button{cursor:pointer;border:0;background:none}
 pre{margin:0;background:var(--chip);border-radius:8px;padding:8px;font-size:11px;font-family:var(--num);white-space:pre-wrap;word-break:break-all;max-height:160px;overflow:auto}
 h3{font-size:12px;letter-spacing:.06em;color:var(--soft);margin:4px 0 0}
 @media (max-width:760px){.app{grid-template-columns:1fr;grid-template-rows:58vh minmax(0,1fr);height:100%}.card{max-height:72%}}
+.card-m{display:flex;align-items:center;gap:6px;padding:7px 10px;border-top:1px solid var(--line);font-size:12px;color:var(--soft)}
+.card-m button{flex:1;border-radius:9px;padding:6px 4px;font-size:13px;border:1px solid var(--line);color:var(--ink)}
+.card-m button[aria-pressed="true"]{color:#fff;border-color:transparent}
+.legend{position:absolute;left:10px;bottom:10px;display:flex;gap:6px;flex-wrap:wrap;pointer-events:none}
+.legend span{background:color-mix(in srgb,var(--panel) 88%,transparent);border-radius:9px;padding:3px 8px;font-size:12px;display:flex;align-items:center;gap:5px}
+.legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+/* embedded in the timer */
+body.embed-view{background:transparent}
+body.embed-view .app{grid-template-columns:1fr;grid-template-rows:1fr;padding:0;gap:0}
+body.embed-view .side,body.embed-view .hud,body.embed-view .views .vb:not([data-v=reset]),body.embed-view .card-f,body.embed-view .card-m,body.embed-view #cLang{display:none!important}
+body.embed-view .view{border-radius:0;background:transparent}
+body.embed-view .load{background:transparent;font-size:13px}
+body.embed-view .card{max-height:45%;width:min(360px,calc(100% - 16px));right:8px;bottom:8px}
+body.embed-view .card-b{font-size:13px}
+body.embed-edit .cfg-dev{display:none}
 </style>
 </head>
 <body>
@@ -87,6 +102,7 @@ h3{font-size:12px;letter-spacing:.06em;color:var(--soft);margin:4px 0 0}
     </div>
     <div class="banner" id="isoBar" hidden><span id="isoTx"></span><button id="isoEnd">結束隔離</button></div>
     <div class="card" id="card" hidden role="dialog" aria-label="部位說明"></div>
+    <div class="legend" id="legend"></div>
     <div class="load" id="load">正在讀取部位清單…</div>
   </div>
   <aside class="side">
@@ -109,8 +125,9 @@ h3{font-size:12px;letter-spacing:.06em;color:var(--soft);margin:4px 0 0}
     </div>
     <div class="pane" id="p-cfg" hidden>
       <p class="note">將來在計時器的編輯頁調好畫面後，只會存下面這一小段設定；練習時只下載設定裡看得到的部位。</p>
-      <pre id="cfg"></pre>
-      <div class="row"><button class="btn" id="copyCfg">複製設定</button><button class="btn pri" id="runMode">用「練習模式」重新載入</button></div>
+      <p class="note embed-note" hidden>調整好之後，按上方的「完成」就會存進這個計時器。</p>
+      <pre id="cfg" class="cfg-dev"></pre>
+      <div class="row cfg-dev"><button class="btn" id="copyCfg">複製設定</button><button class="btn pri" id="runMode">用「練習模式」重新載入</button></div>
       <p class="note" id="runInfo"></p>
       <h3>資料來源</h3>
       <p class="note">模型與英文說明：Z-Anatomy（Gauthier Kervyn、Marcin Zielinski），以 BodyParts3D（© The Database Center for Life Science）為基礎，說明取自維基百科，授權 CC BY-SA 4.0。女性骨盆器官（子宮、卵巢、輸卵管）：HuBMAP Human Reference Atlas 3D 參考器官（Visible Human Female），CC BY 4.0，已對齊到本模型的骨盆。皮下脂肪層：由本 App 依皮膚與肌肉之間的空間推算產生（近似形狀）。中文名稱與中文說明為本 App 整理。</p>
@@ -148,7 +165,10 @@ const SYS = [
   ['nervous', '神經系統', '#e2c13e', 0], ['lymphatic', '淋巴系統', '#6fbf6f', 0],
 ];
 const SYSM = Object.fromEntries(SYS.map(([k, n, c, d]) => [k, { k, n, c, d }]));
-const st = { op: {}, loaded: {}, loading: {}, hidden: new Set(), faded: new Set(), hi: new Set(), iso: null, sel: null, ins: false, run: null, sex: 'M' };
+const EMBED = new URLSearchParams(location.search).get('embed') || ''; // '' | 'edit' | 'view' (inside the timer)
+if (EMBED) document.body.classList.add('embed-' + EMBED);
+const MARK = { s: ['伸展', '#2f7fe0'], c: ['收縮', '#e0452f'], r: ['放鬆', '#3aa65a'] };
+const st = { op: {}, loaded: {}, loading: {}, hidden: new Set(), faded: new Set(), mk: new Map(), iso: null, sel: null, ins: false, run: null, sex: 'M' };
 SYS.forEach(([k, , , d]) => { st.op[k] = d; });
 
 /* ---------- three ---------- */
@@ -163,7 +183,7 @@ function resize() { const r = cv.parentElement.getBoundingClientRect(); renderer
 new ResizeObserver(resize).observe(cv.parentElement);
 const HOME = { pos: new THREE.Vector3(0, .1, 3.6), tgt: new THREE.Vector3(0, .1, 0) };
 function setView(v) {
-  if (v === 'reset') { cam.position.copy(HOME.pos); ctl.target.copy(HOME.tgt); ctl.update(); needs = true; drawCfg(); return; }
+  if (v === 'reset') { const h = EMBED === 'view' && st.home; if (h) { cam.position.fromArray(h.p); ctl.target.fromArray(h.t); } else { cam.position.copy(HOME.pos); ctl.target.copy(HOME.tgt); } ctl.update(); needs = true; drawCfg(); return; }
   const t = ctl.target.clone(), d = cam.position.distanceTo(t);
   const dir = { front: [0, 0, 1], back: [0, 0, -1], left: [-1, 0, 0], right: [1, 0, 0], top: [0, 1, .001] }[v];
   cam.position.set(t.x + dir[0] * d, t.y + dir[1] * d, t.z + dir[2] * d); ctl.update(); needs = true; drawCfg();
@@ -184,13 +204,13 @@ const colorOf = p => {
 const MAT = {};
 function matFor(color, sys, kind) { // shared materials: kind = base | fade | hi
   const key = color + sys + kind; if (MAT[key]) return MAT[key];
-  const m = new THREE.MeshStandardMaterial({ color: kind === 'hi' ? '#16b8c9' : color, roughness: .72, metalness: 0, side: THREE.DoubleSide });
+  const m = new THREE.MeshStandardMaterial({ color: kind === 'hi' ? '#16b8c9' : MARK[kind] ? MARK[kind][1] : color, roughness: .72, metalness: 0, side: THREE.DoubleSide });
   m.userData = { sys, kind }; MAT[key] = m; applyOp(m); return m;
 }
 function applyOp(m) {
   const { sys, kind } = m.userData; let o = (st.op[sys] ?? 100) / 100;
   if (sys === 'insertion') o = 1;
-  if (kind === 'fade') o = Math.min(o, .18); if (kind === 'hi') o = Math.max(o, .95);
+  if (kind === 'fade') o = Math.min(o, .18); if (kind === 'hi' || MARK[kind]) o = Math.max(o, .95);
   const tr = o < .99; if (m.transparent !== tr) m.needsUpdate = true;
   m.transparent = tr; m.opacity = o; m.depthWrite = !tr;
 }
@@ -213,6 +233,12 @@ async function loadSystem(sys, ids) { // ids: only these parts (练習模式) �
     layerState(sys, 'loading');
     const list = MAN.parts.filter(p => p.sys === sys && sexOk(p) && (!ids || ids.has(p.id)) && !meshes[p.id]);
     const groups = {}; for (const p of list) (groups[p.pk || p.sys] ||= []).push(p);
+    const pc = ids && 'caches' in window ? await caches.open('anat-parts-' + DV).catch(() => null) : null;
+    if (pc) for (const [pk, L] of Object.entries(groups)) {
+      const hits = await Promise.all(L.map(p => pc.match(`parts/${p.id}`).then(r => r && r.arrayBuffer()).catch(() => null)));
+      groups[pk] = L.filter((p, i) => { if (!hits[i]) return true; addPart(p, decode(hits[i], 0, p.l)); return false; });
+      if (!groups[pk].length) delete groups[pk];
+    }
     await Promise.all(Object.entries(groups).map(async ([pk, L]) => {
       const url = `data/pack/${pk}.bin?v=${DV}`; let buf = null, base = 0;
       if (ids && L.length < MAN.parts.filter(p => (p.pk || p.sys) === pk).length * .6) {
@@ -221,7 +247,7 @@ async function loadSystem(sys, ids) { // ids: only these parts (练習模式) �
       }
       if (!buf) buf = await (await fetch(url)).arrayBuffer();
       netBytes += buf.byteLength; $('#hNet').textContent = `已下載 ${(netBytes / 1048576).toFixed(1)} MB`;
-      for (const p of L) addPart(p, decode(buf, p.o - base, p.l));
+      for (const p of L) { addPart(p, decode(buf, p.o - base, p.l)); if (pc) pc.put(`parts/${p.id}`, new Response(buf.slice(p.o - base, p.o - base + p.l))).catch(() => {}); }
     }));
     if (!ids) st.loaded[sys] = true; layerState(sys); triCount(); needs = true;
     if (sys === 'skin') weldSkin();
@@ -246,7 +272,7 @@ const frus = new THREE.Frustum(), pm = new THREE.Matrix4();
 function hdWanted() {
   const want = new Map(); // id -> priority
   const add = (id, pr) => { const p = byId[id]; if (p && p.h && meshes[id]) want.set(id, Math.max(want.get(id) || 0, pr)); };
-  if (st.sel) add(st.sel, 1e9); st.hi.forEach(i => add(i, 1e8)); if (st.iso) st.iso.forEach(i => add(i, 1e8));
+  if (st.sel) add(st.sel, 1e9); st.mk.forEach((v, i) => add(i, 1e8)); if (st.iso) st.iso.forEach(i => add(i, 1e8));
   const dist = cam.position.distanceTo(ctl.target);
   if (dist < 1.6) {
     pm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse); frus.setFromProjectionMatrix(pm);
@@ -311,11 +337,11 @@ function styleMesh(m) {
   if (st.run && !st.run.has(id) && p.sys !== 'insertion') vis = false;
   if (!sexOk(p)) vis = false;
   m.visible = vis;
-  const kind = st.sel === id || st.hi.has(id) ? 'hi' : st.faded.has(id) ? 'fade' : 'base';
+  const kind = st.sel === id ? 'hi' : st.mk.has(id) ? st.mk.get(id) : st.faded.has(id) ? 'fade' : 'base';
   m.material = matFor(colorOf(p), p.sys, kind);
 }
 const insFor = p => new Set(MAN.parts.filter(x => x.sys === 'insertion' && x.b === p.b && (!p.side || x.side === p.side)).map(x => x.id));
-function restyle() { hdSchedule(); Object.values(meshes).forEach(styleMesh); Object.values(MAT).forEach(applyOp); needs = true; triCount(); drawCfg(); hiddenBtn(); }
+function restyle() { hdSchedule(); drawLegend(); Object.values(meshes).forEach(styleMesh); Object.values(MAT).forEach(applyOp); needs = true; triCount(); drawCfg(); hiddenBtn(); }
 
 /* ---------- layers panel ---------- */
 function drawLayers() {
@@ -351,7 +377,8 @@ async function select(id) {
   card.innerHTML = `<div class="card-h"><div><h2>${esc(sideZh(p.side) + p.zh)}</h2><div class="en">${esc(p.b)}</div><span class="sys" style="background:${S.c}">${S.n}</span></div>
     <div class="ico"><button class="ib" id="cSpeak" title="朗讀" aria-label="朗讀">🔊</button><button class="ib" id="cLang" title="切換英文原文" aria-label="切換英文原文">EN</button><button class="ib" id="cX" title="關閉" aria-label="關閉">✕</button></div></div>
     <div class="card-b" id="cBody"><span class="muted">讀取說明…</span></div>
-    <div class="card-f"><button id="cHide">隱藏</button><button id="cFade" aria-pressed="${st.faded.has(id)}">褪色</button><button id="cIso">隔離</button>${p.sys === 'muscular' ? '<button id="cIns" aria-pressed="false">起止點</button>' : `<button id="cHi" aria-pressed="${st.hi.has(id)}">設為重點</button>`}</div>`;
+    <div class="card-f"><button id="cHide">隱藏</button><button id="cFade" aria-pressed="${st.faded.has(id)}">褪色</button><button id="cIso">隔離</button>${p.sys === 'muscular' ? '<button id="cIns" aria-pressed="false">起止點</button>' : '<button id="cFocus">置中</button>'}</div>
+    <div class="card-m">標記${Object.entries(MARK).map(([k, [n, c]]) => `<button data-mk="${k}" aria-pressed="${st.mk.get(id) === k}" style="${st.mk.get(id) === k ? 'background:' + c : ''}">${n}</button>`).join('')}</div>`;
   const d = (await loadDesc(p.sys))[p.b] || {};
   let lang = d.zh ? 'zh' : 'en';
   const body = () => {
@@ -370,7 +397,12 @@ async function select(id) {
   $('#cHide').onclick = () => { st.hidden.add(id); select(null); };
   $('#cFade').onclick = e => { st.faded.has(id) ? st.faded.delete(id) : st.faded.add(id); e.target.setAttribute('aria-pressed', st.faded.has(id)); st.sel = null; restyle(); st.sel = id; };
   $('#cIso').onclick = () => isolate(new Set([id]));
-  if ($('#cHi')) $('#cHi').onclick = e => { st.hi.has(id) ? st.hi.delete(id) : st.hi.add(id); e.target.setAttribute('aria-pressed', st.hi.has(id)); restyle(); };
+  if ($('#cFocus')) $('#cFocus').onclick = () => focusOn([id]);
+  card.querySelectorAll('[data-mk]').forEach(b => b.onclick = () => {
+    const k = b.dataset.mk; st.mk.get(id) === k ? st.mk.delete(id) : st.mk.set(id, k);
+    card.querySelectorAll('[data-mk]').forEach(x => { const on = st.mk.get(id) === x.dataset.mk; x.setAttribute('aria-pressed', on); x.style.background = on ? MARK[x.dataset.mk][1] : ''; });
+    st.sel = null; restyle(); st.sel = id; // show the mark colour right away
+  });
   if ($('#cIns')) $('#cIns').onclick = async e => { st.ins = !st.ins; e.target.setAttribute('aria-pressed', st.ins); if (st.ins) { await loadSystem('insertion'); } restyle(); };
 }
 function isolate(set) {
@@ -416,11 +448,67 @@ document.querySelector('.views').addEventListener('click', e => { const b = e.ta
 
 /* ---------- timer config + 練習模式 (load only what is visible) ---------- */
 function visibleIds() { return new Set(Object.values(meshes).filter(m => m.visible && m.userData.p.sys !== 'insertion').map(m => m.name)); }
+const keyOf = p => p.sys + '|' + p.b + '|' + p.side, KEY = {}; // part keys survive data rebuilds, ids do not
+const toKeys = ids => [...ids].filter(i => byId[i]).map(i => keyOf(byId[i]));
+const toIds = keys => (keys || []).map(k => KEY[k]).filter(Boolean);
 function cfgObj() {
-  const r = v => Math.round(v * 1000) / 1000;
-  return { layers: Object.fromEntries(Object.entries(st.op).filter(([, v]) => v > 0)), hidden: [...st.hidden], faded: [...st.faded], hi: [...st.hi], iso: st.iso ? [...st.iso] : undefined,
+  const r = v => Math.round(v * 1000) / 1000, mk = {};
+  st.mk.forEach((v, i) => { if (byId[i]) mk[keyOf(byId[i])] = v; });
+  return { v: 2, layers: Object.fromEntries(Object.entries(st.op).filter(([, v]) => v > 0)), hidden: toKeys(st.hidden), faded: toKeys(st.faded), mk, iso: st.iso ? toKeys(st.iso) : undefined,
     cam: { p: cam.position.toArray().map(r), t: ctl.target.toArray().map(r) }, sex: st.sex === 'F' ? 'F' : undefined };
 }
+function readCfg(c) { // -> state pieces with ids
+  c = c || {}; const op = {}; SYS.forEach(([k]) => { op[k] = c.layers ? (c.layers[k] || 0) : SYSM[k].d; });
+  const mk = new Map(); Object.entries(c.mk || {}).forEach(([k, v]) => { if (KEY[k] && MARK[v]) mk.set(KEY[k], v); });
+  return { op, hidden: new Set(toIds(c.hidden)), faded: new Set(toIds(c.faded)), mk, iso: c.iso ? new Set(toIds(c.iso)) : null, sex: c.sex === 'F' ? 'F' : 'M', cam: c.cam };
+}
+function needIds(r) { // parts a saved view shows: only these are downloaded in the timer
+  return new Set(MAN.parts.filter(p => p.sys !== 'insertion' && (!p.sx || p.sx === r.sex) && r.op[p.sys] > 0 && !r.hidden.has(p.id) && (!r.iso || r.iso.has(p.id))).map(p => p.id));
+}
+function markWords() { // 「伸展：雙側股二頭肌、左側腰大肌。收縮：…」 for reading aloud in the timer
+  const out = [];
+  for (const [k, [n]] of Object.entries(MARK)) {
+    const by = new Map(); st.mk.forEach((v, i) => { if (v !== k || !byId[i]) return; const p = byId[i]; const a = by.get(p.zh) || new Set(); a.add(p.side); by.set(p.zh, a); });
+    if (by.size) out.push(n + '：' + [...by].map(([zh, sd]) => (sd.has('L') && sd.has('R') ? '雙側' : sd.has('L') ? '左側' : sd.has('R') ? '右側' : '') + zh).join('、'));
+  }
+  return out.join('。');
+}
+function drawLegend() {
+  const used = new Set([...st.mk].filter(([i]) => meshes[i] && meshes[i].visible).map(([, v]) => v));
+  $('#legend').innerHTML = Object.entries(MARK).filter(([k]) => used.has(k)).map(([k, [n, c]]) => `<span><i style="background:${c}"></i>${n}</span>`).join('');
+}
+async function applyCfg(c, view) {
+  const r = readCfg(c); Object.assign(st, { op: r.op, hidden: r.hidden, faded: r.faded, mk: r.mk, sex: r.sex }); st.iso = r.iso; st.sel = null; $('#card').hidden = true;
+  document.querySelectorAll('[data-sex]').forEach(x => x.setAttribute('aria-pressed', x.dataset.sex === st.sex));
+  if (view) {
+    const need = needIds(r); st.run = need;
+    for (const [id, m] of Object.entries(meshes)) if (!need.has(id) && m.userData.p.sys !== 'insertion') { scene.remove(m); m.geometry.dispose(); delete meshes[id]; }
+    for (const k in st.loaded) delete st.loaded[k];
+    await Promise.all([...new Set([...need].map(i => byId[i].sys))].map(s => loadSystem(s, need)));
+  } else {
+    drawLayers(); await Promise.all(SYS.filter(([k]) => st.op[k] > 0).map(([k]) => loadSystem(k)));
+    $('#isoBar').hidden = !st.iso;
+  }
+  st.home = r.cam || null;
+  if (r.cam) { cam.position.fromArray(r.cam.p); ctl.target.fromArray(r.cam.t); ctl.update(); } else setView('reset');
+  restyle();
+}
+function snapshot() { // small JPEG of the current view for the timer (thumbnail + offline fallback)
+  const sel = st.sel; st.sel = null; Object.values(meshes).forEach(styleMesh); renderer.render(scene, cam);
+  const w = cv.width, h = cv.height, k = Math.min(1, 720 / Math.max(w, h)), c2 = document.createElement('canvas');
+  c2.width = Math.round(w * k); c2.height = Math.round(h * k); const g = c2.getContext('2d');
+  g.fillStyle = getComputedStyle(document.body).getPropertyValue('--view') || '#f4f6f5'; g.fillRect(0, 0, c2.width, c2.height); g.drawImage(cv, 0, 0, c2.width, c2.height);
+  st.sel = sel; Object.values(meshes).forEach(styleMesh); needs = true;
+  return c2.toDataURL('image/jpeg', .82);
+}
+const toParent = m => { try { parent.postMessage(m, location.origin); } catch {} };
+window.addEventListener('message', async e => {
+  if (e.origin !== location.origin || !e.data || !MAN) return; const d = e.data;
+  if (d.type === 'anat-load') { $('#load').hidden = false; $('#load').textContent = '正在載入人體圖…'; try { await applyCfg(d.cfg, EMBED === 'view'); } catch (er) { console.warn(er); } $('#load').hidden = true; toParent({ type: 'anat-loaded', key: d.key, n: Object.keys(meshes).length }); }
+  if (d.type === 'anat-get') toParent({ type: 'anat-cfg', cfg: cfgObj(), thumb: snapshot(), say: markWords(), id: d.id });
+  if (d.type === 'anat-spin') { ctl.autoRotate = !!d.on; ctl.autoRotateSpeed = .6; needs = true; }
+});
+if (EMBED === 'view') document.addEventListener('keydown', e => { if (e.target.closest && e.target.closest('input,textarea')) return; toParent({ type: 'anat-key', key: e.key, code: e.code, ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey, altKey: e.altKey }); });
 function drawCfg() { const c = cfgObj(), s = JSON.stringify(c); $('#cfg').textContent = s.length > 1500 ? s.slice(0, 1500) + '…' : s; }
 $('#copyCfg').addEventListener('click', async () => { try { await navigator.clipboard.writeText(JSON.stringify(cfgObj())); $('#copyCfg').textContent = '已複製'; } catch { $('#copyCfg').textContent = '無法複製'; } setTimeout(() => { $('#copyCfg').textContent = '複製設定'; }, 1500); });
 $('#runMode').addEventListener('click', async () => {
@@ -439,12 +527,19 @@ $('#runMode').addEventListener('click', async () => {
 let frames = 0, last = performance.now();
 renderer.setAnimationLoop(() => { const ch = ctl.update(); if (needs || ch) { renderer.render(scene, cam); needs = false; frames++; } const n = performance.now(); if (n - last > 1000) { $('#hFps').textContent = frames ? frames + ' fps' : '靜止'; frames = 0; last = n; } });
 try {
-  MAN = await (await fetch(`data/manifest.json?v=${DV}`)).json(); EXT = MAN.ext; MAN.parts = MAN.parts.filter(p => p.x !== 'rm'); MAN.parts.forEach(p => { byId[p.id] = p; });
+  MAN = await (await fetch(`data/manifest.json?v=${DV}`)).json(); EXT = MAN.ext; MAN.parts = MAN.parts.filter(p => p.x !== 'rm'); MAN.parts.forEach(p => { byId[p.id] = p; KEY[keyOf(p)] = p.id; });
   drawLayers(); setView('reset'); resize();
+  if (EMBED) { // the timer sends the saved view with 'anat-load'
+    if (EMBED === 'edit') { document.querySelector('.embed-note').hidden = false; }
+    $('#load').textContent = '等待計時器…'; toParent({ type: 'anat-ready' });
+    caches && caches.keys().then(k => k.filter(x => x.startsWith('anat-parts-') && x !== 'anat-parts-' + DV).forEach(x => caches.delete(x))).catch(() => {});
+    throw 'embed';
+  }
   $('#load').textContent = '正在下載骨骼與肌肉…';
   await Promise.all(SYS.filter(([k]) => st.op[k] > 0).map(([k]) => loadSystem(k)));
   $('#load').hidden = true; restyle();
-} catch (e) { $('#load').textContent = '載入失敗：' + (e.message || e); }
+} catch (e) { if (e !== 'embed') $('#load').textContent = '載入失敗：' + (e.message || e); }
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>
