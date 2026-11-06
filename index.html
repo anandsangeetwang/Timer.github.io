@@ -936,6 +936,15 @@ span.tag{cursor:default}
 .qt-snd{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:14px}
 .qt-snd .snd-pick{background:var(--panel-2)}
 .sb-b{flex:none}
+/* v3.16 ratio fit + undo */
+.rf-h{margin:12px 0 6px!important;font-size:13px!important}
+.rf-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:13px;flex-wrap:wrap}
+.rf-row select{flex:1;min-width:0;border:0;border-radius:10px;padding:5px 6px;font-size:13px;background:rgba(255,255,255,.75)}
+.rf-row input{width:84px;border:0;border-radius:10px;padding:5px 6px;font-size:15px;font-weight:700;text-align:center;background:rgba(255,255,255,.85)}
+.rf-row .save-btn{padding:5px 12px;font-size:13px}
+#fp-ratio .note{font-size:11px;color:var(--leaf-ink);opacity:.8}
+.rt-b:disabled{opacity:.35}
+#fp-ratio{width:290px}
 </style></head><body>
 <div class="app" id="app"></div>
 <div class="flash" id="flash"></div>
@@ -1104,8 +1113,9 @@ function touch(rec) { if (rec) { rec.u = Date.now(); rec.d = DEV; } S.sync.chang
 function touchPrefs() { S.settingsU = Date.now(); S.sync.changedAt = Date.now(); Sync.schedule(); }
 function tomb(kind, id) { S.deleted[kind + ':' + id] = Date.now(); S.sync.changedAt = Date.now(); Sync.schedule(); }
 const curTimer = () => (QT && QT.timer) || (S && S.timers[S.currentTimerId]) || null; // QT = 臨時計時器 (stage.js)
-const scaledSec = (it, t) => Math.max(1, Math.round(it.sec * (t.ratio || 1)));
-const scaledCount = (it, t) => Math.max(1, Math.round((it.count || 0) * (t.ratio || 1)));
+// it.noRatio = this 計時器 keeps its own time / count whatever the 時間比例 is
+const scaledSec = (it, t) => it.noRatio ? Math.max(1, it.sec) : Math.max(1, Math.round(it.sec * (t.ratio || 1)));
+const scaledCount = (it, t) => it.noRatio ? Math.max(1, it.count || 0) : Math.max(1, Math.round((it.count || 0) * (t.ratio || 1)));
 const fmtRatio = r => r.toFixed(2).padStart(5, '0') + '倍';
 const sndById = id => S.sounds.find(s => s.id === id);
 const sndIndex = id => S.sounds.findIndex(s => s.id === id);
@@ -1486,7 +1496,7 @@ function buildShell() {
 <div class="page main" id="pMain">
   <div class="topbar"><button class="icon-btn" data-act="menu" aria-label="開啟群組清單">${I.menu}</button><div class="tname" id="tName"></div><button class="icon-btn keys-t" data-act="qtOpen" aria-label="臨時計時器">${I.qt}</button><button class="icon-btn keys-t" data-act="arrange" aria-label="調整區塊順序">${LI.order}</button><button class="icon-btn keys-t" data-act="search" aria-label="搜尋">${I.search}</button><button class="icon-btn keys-t" data-act="keys" aria-label="快捷鍵清單">${I.keys}</button><button class="icon-btn gear-t" data-act="settings" aria-label="設定">${I.gear}</button></div>
   <aside class="groups" id="groups" aria-label="群組與計時器">
-    <div class="groups-head"><button class="gear" data-act="settings" aria-label="設定">${I.gear}</button><button class="tri up" data-act="gup" aria-label="群組往上捲">${I.flower}</button><button class="sort-btn" data-act="sortMode" title="排序群組與計時器（S）" aria-label="排序群組與計時器">${I.sort}</button><button class="sort-btn" data-act="qtOpen" title="臨時計時器（T）" aria-label="臨時計時器">${I.qt}</button><button class="sort-btn keys-btn" data-act="keys" title="快捷鍵（F1）" aria-label="快捷鍵清單">${I.keys}</button></div>
+    <div class="groups-head"><button class="gear" data-act="settings" aria-label="設定">${I.gear}</button><button class="sort-btn" data-act="qtOpen" title="臨時計時器（T）" aria-label="臨時計時器">${I.qt}</button><button class="tri up" data-act="gup" aria-label="群組往上捲">${I.flower}</button><button class="sort-btn" data-act="sortMode" title="排序群組與計時器（S）" aria-label="排序群組與計時器">${I.sort}</button><button class="sort-btn keys-btn" data-act="keys" title="快捷鍵（F1）" aria-label="快捷鍵清單">${I.keys}</button></div>
     <button class="search-pill" data-act="search" title="搜尋（${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'} + K）">${I.search}<span>搜尋群組、計時器</span></button>
     <div class="sortbar" id="sortBar" hidden><span>按住 ≡ 拖曳調整順序</span><button class="save-btn" data-act="sortDone">完成</button></div>
     <div class="group-list" id="groupList"></div>
@@ -1517,6 +1527,7 @@ function buildShell() {
     <h3>調整時間比例</h3>
     <div class="ratio-row"><button class="mini" data-act="rdown" aria-label="減少">−</button><input class="ratio-val num" id="ratioInput" inputmode="decimal" aria-label="倍率"><button class="mini" data-act="rup" aria-label="增加">＋</button></div>
     <div class="kv" id="rKv"></div>
+    <div id="rFit"></div>
   </div>
   <div class="fpanel note" id="fp-note" hidden></div>
   <div class="fpanel" id="fp-sound" hidden><h3>音效模式</h3><div id="modeList" role="radiogroup" aria-label="音效模式"></div><div id="slotSwitch"></div></div>
@@ -1537,6 +1548,7 @@ function buildShell() {
     <div class="splitter e-split" id="eSplit" role="separator" aria-orientation="horizontal" aria-label="拖曳調整圖片與說明的比例（這個計時器的預設）" tabindex="0"><span></span></div>
     <div class="desc-edit"><span class="de-label" id="eDescLbl">說明區塊</span>
       <div class="rt-bar" role="toolbar" aria-label="選取文字後設定格式">
+        <button type="button" class="rt-b" id="rtUndo" data-act="rtUndo" title="上一步（Ctrl + Z）" aria-label="上一步">↶</button><button type="button" class="rt-b" id="rtRedo" data-act="rtRedo" title="下一步（Ctrl + Y 或 Ctrl + Shift + Z）" aria-label="下一步">↷</button><button type="button" class="rt-clear" data-act="rtCancel" title="說明回到這次打開編輯頁時的內容">取消變更</button><span class="rt-sep"></span>
         <label class="rt-size">字級<input type="number" id="rtSize" min="8" max="96" step="1" value="16" inputmode="numeric" list="rtSizes" aria-label="字體大小（像素）"><datalist id="rtSizes"><option value="12"><option value="14"><option value="16"><option value="18"><option value="20"><option value="24"><option value="28"><option value="32"><option value="40"><option value="48"></datalist><button type="button" class="rt-b" data-act="rtSizeDn" aria-label="字級減 2">−</button><button type="button" class="rt-b" data-act="rtSizeUp" aria-label="字級加 2">＋</button></label>
         ${['#16191d', '#d64545', '#e8892b', '#2f8a3a', '#2f6fc0', '#8a4fc0', '#8a929c'].map(c => `<button type="button" class="rt-sw" data-act="rtColor" data-c="${c}" style="background:${c}" aria-label="文字顏色 ${c}"></button>`).join('')}
         <label class="rt-pick" title="自訂顏色"><input type="color" id="rtPick" value="#d64545" aria-label="自訂文字顏色"></label>
@@ -1642,7 +1654,9 @@ function renderDrawers() {
     for (const it of t.items) { const pr = prepSec(it) + restSec(it); o += pr; c += pr; if (it.mode === 'down') { o += it.sec; c += scaledSec(it, t); } else { up++; co += it.count || 0; cc += scaledCount(it, t); } }
     $('#rKv').innerHTML = `<span style="grid-column:1/-1;font-weight:700">當前計時長度</span><span>原始</span><b class="num">${fmt(o)}</b><span>轉換</span><b class="num">${fmt(c)}</b>` +
       (up ? `<span>次數</span><b class="num">${co} → ${cc}</b><span class="note">另有 ${up} 個正數計時項目，不計入長度</span>` : '');
+    const fx = t.items.filter(x => x.noRatio).length; if (fx) $('#rKv').insertAdjacentHTML('beforeend', `<span class="note">${fx} 個計時器設定為不受比例影響</span>`);
   }
+  renderRatioFit();
   const modes = [['normal', '一般模式', '播放設定的音效'], ['fade', '漸進模式', `過程音效前 ${S.settings.fadeIn} 秒淡入、後 ${S.settings.fadeOut} 秒淡出`],
     ['vibrate', '震動模式', isIOS ? 'iPhone／iPad 網頁無法在計時中震動，改用畫面閃爍＋計時器選的震動音（可在設定調整）' : isAndroid ? '用手機震動提示；選了「震動音」的會用那種震動節奏' : '用畫面閃爍提示'], ['mute', '靜音模式', '只有畫面閃爍']];
   $('#modeList').innerHTML = modes.map(([k, n, d]) => `<button class="mode-opt" role="radio" aria-checked="${S.settings.soundMode === k}" data-act="mode" data-m="${k}"><span class="box"></span><span>${n}<small>${d}</small></span></button>`).join('');
@@ -1916,7 +1930,7 @@ function cleanHTML(html) {
 let rtRange = null;
 function syncDesc() {
   const it = selItem(); if (!it) return; const ed = $('#eDesc');
-  it.descHtml = rtTrimEmpty(cleanHTML(ed.innerHTML)); it.desc = ed.innerText.trim(); markDirty();
+  it.descHtml = rtTrimEmpty(cleanHTML(ed.innerHTML)); it.desc = ed.innerText.trim(); markDirty(); dhRecord();
 }
 function rtRestore() {
   const ed = $('#eDesc'); ed.focus();
@@ -1960,6 +1974,7 @@ document.addEventListener('selectionchange', () => {
 /* ================= EDIT ================= */
 const E = { draft: null, isNew: false, g: 0, sel: 0, dirty: false, detail: false };
 function openEdit(timerId, gi) {
+  DH.map.clear();
   E.isNew = !timerId; E.g = gi ?? 0; E.sel = 0; E.dirty = false; E.detail = false;
   E.draft = timerId ? clone(S.timers[timerId]) : { id: uid(), name: '新的計時器', note: '', ratio: 1, globalSound: 'none', items: [newItem(1)] };
   if (E.isNew) E.dirty = true;
@@ -2006,12 +2021,13 @@ function renderEditForm() {
     ${slotEditorHTML(it)}
   </div>
   <div class="srow"><label>全域</label>${sndPickBtn(E.draft.globalSound, 'data-act="sndPickG"', '全域音效')}</div>
-  <div class="line"><span>不使用全域</span><button type="button" class="toggle" role="switch" aria-checked="${!!it.noGlobal}" data-act="noGlobal" aria-label="不使用全域"></button></div>`;
+  <div class="line"><span>不使用全域</span><button type="button" class="toggle" role="switch" aria-checked="${!!it.noGlobal}" data-act="noGlobal" aria-label="不使用全域"></button></div>
+  <div class="line"><span>不受時間比例影響</span><button type="button" class="toggle" role="switch" aria-checked="${!!it.noRatio}" data-act="noRatio" aria-label="不受時間比例影響" title="打開後，調整模組的時間比例時，這個計時器的時間與次數維持原樣"></button></div>`;
 }
 function renderEditMedia() {
   renderLayRow(); pvRefresh(); pasteModeBtn();
   const it = selItem(); const box = $('#eImg'); if (it) imgFitApply(box, Object.assign({}, it, { id: '__edit' }));
-  $('#eDesc').innerHTML = it ? (it.descHtml ? cleanHTML(it.descHtml) : esc(it.desc || '').replace(/\n/g, '<br>')) : ''; richEditPrep($('#eDesc'));
+  $('#eDesc').innerHTML = it ? (it.descHtml ? cleanHTML(it.descHtml) : esc(it.desc || '').replace(/\n/g, '<br>')) : ''; richEditPrep($('#eDesc')); dhInit();
   const want = it && it.imageId; box.dataset.img = want || '';
   const actions = want ? `<div class="img-actions"><span class="chip" data-act="pickImg">編輯排版</span><span class="chip" data-act="imgRemove">移除</span></div>` : '';
   if (want) mediaURL(want).then(u => { if (box.dataset.img === want) box.innerHTML = (u ? `<img src="${u}" alt="">` : ph()) + actions; });
@@ -2046,7 +2062,7 @@ function commitEdit() {
   touch(d); S.timers[d.id] = clone(d);
   if (E.isNew) { S.currentTimerId = d.id; resetRun(); E.isNew = false; }
   if (d.id === S.currentTimerId) { if (R.idx >= d.items.length) resetRun(); }
-  E.dirty = false; resetTempLayout(); save(); toast('已儲存'); return true;
+  E.dirty = false; resetTempLayout(); DH.map.clear(); save(); toast('已儲存'); return true;
 }
 function initDrag() {
   let dr = null;
@@ -2542,7 +2558,7 @@ const fmtTime = ts => ts ? new Date(ts).toLocaleString('zh-TW', { month: 'numeri
 
 /* ================= delete: long-press / swipe / multi-select ================= */
 let SEL = null; // { kind, ctx, keys:Set }
-const APP_VER = '3.15';
+const APP_VER = '3.16';
 let swallowClick = false;
 const KIND_LABEL = { group: '群組', timer: '計時器模組', item: '計時器', sound: '音效' };
 function delName(kind, key) {
@@ -2743,6 +2759,7 @@ const ACT = {
   selItem: a => { stopPv(); E.sel = +a.dataset.i; if (isPortrait()) { E.detail = true; if (useHistory) repush(); } renderEdit(); },
   setMode: a => { const it = selItem(); if (it.mode !== a.dataset.m) { it.mode = a.dataset.m; if (it.mode === 'down' && it.sec < 1) it.sec = 60; if (it.mode === 'up' && it.count < 1) it.count = 10; markDirty(); renderEditForm(); } },
   spin: a => applySpin(a.dataset.f, +a.dataset.d),
+  noRatio: () => { const it = selItem(); if (it.noRatio) delete it.noRatio; else it.noRatio = true; markDirty(); renderEditForm(); },
   noGlobal: () => { const it = selItem(); it.noGlobal = !it.noGlobal; markDirty(); renderEditForm(); },
   pickImg: () => openComposer(),
   imgRemove: () => { const it = selItem(); it.imageId = null; it.scene = null; markDirty(); renderEditMedia(); },
@@ -2804,7 +2821,7 @@ function bindEvents() {
     if (e.key === 'Escape') { if (SEL) exitSelect(); else if (SORT) exitSort(); else if (openDrawer) closeDrawers(); else if (page !== 'main') goBack(); else closeMenu(); }
   });
   document.addEventListener('pointerdown', e => { if (openDrawer && !e.target.closest('.ftab,.fpanel,.scrim,.toast')) closeDrawers(); }, true);
-  initRichView(); initRichEdit(); initLayout(); initSlots(); initPhase(); initSndCat();
+  initRichView(); initRichEdit(); initLayout(); initSlots(); initPhase(); initSndCat(); initRatioFit(); initDescHist();
   const ri = $('#ratioInput');
   ri.addEventListener('focus', () => { const t = curTimer(); ri.value = (t ? t.ratio || 1 : 1).toFixed(2); ri.select(); });
   ri.addEventListener('change', () => setRatio(parseFloat(ri.value)));
@@ -3986,7 +4003,8 @@ function richPaste(e) {
   const clean = cleanHTML(html.replace(/<!--[\s\S]*?-->/g, '').replace(/^[\s\S]*<body[^>]*>/i, '').replace(/<\/body>[\s\S]*$/i, ''));
   document.execCommand('insertHTML', false, clean);
   richEditPrep($('#eDesc')); syncDesc();
-  toast('已保留原本格式貼上', () => { const ed = $('#eDesc'); ed.focus(); document.execCommand('undo'); document.execCommand('insertText', false, txt); syncDesc(); }, '改成純文字', 6000);
+  dhPush(); const before = (DH.map.get(selItem().id) || { st: [] }).st.slice(-2)[0];
+  toast('已保留原本格式貼上', () => { if (before != null) dhGo(-1); const ed = $('#eDesc'); ed.focus(); document.execCommand('insertText', false, txt); syncDesc(); }, '改成純文字', 6000);
 }
 function pasteModeBtn() { const b = $('#rtPasteMode'); if (b) { b.textContent = S.settings.pastePlain ? '貼上：純文字' : '貼上：保留格式'; b.setAttribute('aria-pressed', !S.settings.pastePlain); } }
 function rtCaret() {
@@ -4851,6 +4869,107 @@ Object.assign(ACT, {
   catAdd: () => { const s = sndById(SV.sel), inp = $('#catIn'); if (!s || !inp) return; const v = normCat(inp.value); if (!v) { inp.focus(); return; } catSet(s, [...sndCats(s), v]); setTimeout(() => { const i = $('#catIn'); i && i.focus(); }, 0); },
   catDel: a => { const s = sndById(SV.sel); if (!s) return; const cs = sndCats(s).slice(); cs.splice(+a.dataset.i, 1); catSet(s, cs); },
 });
+
+/* ================= 時間比例: set one 計時器's length (or the total) and scale the rest (v3.16) ================= */
+function parseHMS(v) {
+  v = String(v || '').trim().replace(/[：]/g, ':'); if (!v) return null;
+  if (!/^\d+(:\d{1,2}){0,2}$/.test(v)) return null;
+  return v.split(':').map(Number).reduce((a, b) => a * 60 + b, 0);
+}
+function ratioParts(t) {
+  let fixed = 0, scal = 0;
+  for (const it of t.items) { fixed += prepSec(it) + restSec(it); if (it.mode === 'down') { if (it.noRatio) fixed += it.sec; else scal += it.sec; } }
+  return { fixed, scal };
+}
+function renderRatioFit() {
+  const box = $('#rFit'); if (!box) return;
+  if (box.contains(document.activeElement)) return; // don't wipe what is being typed
+  const t = curTimer(); if (!t) { box.innerHTML = ''; return; }
+  const cands = t.items.map((it, i) => ({ it, i })).filter(x => x.it.mode === 'down' && !x.it.noRatio);
+  if (!cands.length) { box.innerHTML = '<p class="note">沒有可以依比例調整的倒數計時器</p>'; return; }
+  const curI = cands.some(x => x.i === R.idx) ? R.idx : cands[0].i, cur = t.items[curI];
+  const { fixed, scal } = ratioParts(t), total = fixed + Math.round(scal * (t.ratio || 1));
+  box.innerHTML = `<h4 class="rf-h">指定時間，其他計時器跟著同比例調整</h4>
+    <div class="rf-row"><select id="rfItem" aria-label="選擇計時器">${cands.map(x => `<option value="${x.i}" ${x.i === curI ? 'selected' : ''}>${x.i + 1}.${esc(x.it.title || '未命名')}（原 ${fmtMS(x.it.sec)}）</option>`).join('')}</select></div>
+    <div class="rf-row"><span>變成</span><input id="rfSec" class="num" value="${fmtMS(scaledSec(cur, t))}" inputmode="numeric" aria-label="這個計時器要多長（分:秒）"><button type="button" class="save-btn" data-act="rfItem">套用</button></div>
+    <div class="rf-row"><span>或整個模組總長</span><input id="rfTot" class="num" value="${fmt(total)}" inputmode="numeric" aria-label="整個模組總長（時:分:秒）"><button type="button" class="save-btn" data-act="rfTot">套用</button></div>
+    <p class="note">講解、休息與勾選「不受時間比例影響」的計時器不會改變。</p>`;
+}
+function ratioApply(r, what) {
+  const t = curTimer(); if (!t) return;
+  if (!isFinite(r) || r <= 0) { toast('無法計算比例'); return; }
+  const rr = clamp(Math.round(r * 100) / 100, .1, 9.99);
+  if (Math.abs(rr - r) > .005) toast(`比例只能在 0.10～9.99 倍之間，已設為 ${rr.toFixed(2)} 倍`);
+  document.activeElement && document.activeElement.blur();
+  setRatio(rr);
+  const { fixed, scal } = ratioParts(t);
+  toast(`${what}：比例 ${rr.toFixed(2)} 倍，總長 ${fmt(fixed + Math.round(scal * rr))}`);
+}
+Object.assign(ACT, {
+  rfItem: () => {
+    const t = curTimer(); if (!t) return; const it = t.items[+$('#rfItem').value], v = parseMS($('#rfSec').value);
+    if (!it || v == null || v < 1) { toast('請輸入秒數或 分:秒，例如 1:30'); return; }
+    ratioApply(v / it.sec, `「${it.title || '未命名'}」${fmtMS(v)}`);
+  },
+  rfTot: () => {
+    const t = curTimer(); if (!t) return; const v = parseHMS($('#rfTot').value); const { fixed, scal } = ratioParts(t);
+    if (v == null) { toast('請輸入 時:分:秒，例如 0:30:00'); return; }
+    if (!scal) { toast('沒有可以依比例調整的倒數計時器'); return; }
+    if (v <= fixed) { toast(`總長至少要超過不會變的部分（${fmt(fixed)}）`); return; }
+    ratioApply((v - fixed) / scal, `總長 ${fmt(v)}`);
+  },
+});
+function initRatioFit() {
+  $('#fp-ratio').addEventListener('keydown', e => { if (e.key !== 'Enter') return; if (e.target.id === 'rfSec') { e.preventDefault(); ACT.rfItem(); } if (e.target.id === 'rfTot') { e.preventDefault(); ACT.rfTot(); } });
+  $('#fp-ratio').addEventListener('change', e => { if (e.target.id === 'rfItem') { const t = curTimer(), it = t.items[+e.target.value]; if (it) $('#rfSec').value = fmtMS(scaledSec(it, t)); } });
+}
+
+/* ================= 說明 editor: 上一步 / 下一步 / 取消變更 (own history; per 計時器, this edit session) (v3.16) ================= */
+const DH = { map: new Map(), t: 0, lock: false, pending: false };
+const dhItem = () => (E.draft && selItem()) || null;
+function dhInit() {
+  const it = dhItem(), ed = $('#eDesc'); if (!it || !ed) return;
+  if (!DH.map.has(it.id)) DH.map.set(it.id, { st: [ed.innerHTML], i: 0, orig: ed.innerHTML });
+  dhBtns();
+}
+function dhPush() {
+  DH.pending = false; clearTimeout(DH.t);
+  const it = dhItem(), h = it && DH.map.get(it.id), v = $('#eDesc').innerHTML; if (!h || h.st[h.i] === v) return;
+  h.st.splice(h.i + 1); h.st.push(v); if (h.st.length > 200) h.st.shift(); h.i = h.st.length - 1; dhBtns();
+}
+function dhRecord() { if (DH.lock) return; DH.pending = true; clearTimeout(DH.t); DH.t = setTimeout(dhPush, 400); }
+function dhSet(html) {
+  const ed = $('#eDesc'); ed.innerHTML = html; richEditPrep(ed);
+  DH.lock = true; syncDesc(); DH.lock = false;
+  ed.focus(); const r = document.createRange(); r.selectNodeContents(ed); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+}
+function dhGo(d) {
+  if (DH.pending) dhPush();
+  const it = dhItem(), h = it && DH.map.get(it.id); if (!h) return false;
+  const j = h.i + d; if (j < 0 || j >= h.st.length) return false;
+  h.i = j; dhSet(h.st[j]); dhBtns(); return true;
+}
+function dhCancel() {
+  if (DH.pending) dhPush();
+  const it = dhItem(), h = it && DH.map.get(it.id); if (!h) return;
+  if ($('#eDesc').innerHTML === h.orig) { toast('說明沒有變更'); return; }
+  dhSet(h.orig); h.st.splice(h.i + 1); h.st.push(h.orig); h.i = h.st.length - 1; dhBtns();
+  toast('已取消這次對說明的變更（按「上一步」可以找回）');
+}
+function dhBtns() {
+  const it = dhItem(), h = it && DH.map.get(it.id);
+  const u = $('#rtUndo'), r = $('#rtRedo'); if (!u) return;
+  u.disabled = !h || (h.i <= 0 && !DH.pending); r.disabled = !h || h.i >= h.st.length - 1 || DH.pending;
+}
+function initDescHist() {
+  $('#eDesc').addEventListener('keydown', e => {
+    const mod = e.ctrlKey || e.metaKey; if (!mod) return; const k = e.key.toLowerCase();
+    if (k === 'z' && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); dhGo(-1); }
+    else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); e.stopPropagation(); dhGo(1); }
+  }, true);
+  $('#eDesc').addEventListener('input', () => dhBtns());
+}
+Object.assign(ACT, { rtUndo: () => dhGo(-1), rtRedo: () => dhGo(1), rtCancel: () => dhCancel() });
 
 /* ================= boot ================= */
 (async () => {
