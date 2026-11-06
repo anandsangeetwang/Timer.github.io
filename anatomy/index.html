@@ -121,7 +121,6 @@ h3{font-size:12px;letter-spacing:.06em;color:var(--soft);margin:4px 0 0}
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-const DV = '3'; // data version: bump when the data files change so browsers do not mix old and new files
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const ICON = {
@@ -214,7 +213,7 @@ async function loadSystem(sys, ids) { // ids: only these parts (练習模式) �
     const list = MAN.parts.filter(p => p.sys === sys && sexOk(p) && (!ids || ids.has(p.id)) && !meshes[p.id]);
     const groups = {}; for (const p of list) (groups[p.pk || p.sys] ||= []).push(p);
     await Promise.all(Object.entries(groups).map(async ([pk, L]) => {
-      const url = `data/pack/${pk}.bin?v=${DV}`; let buf = null, base = 0;
+      const url = `data/pack/${pk}.bin`; let buf = null, base = 0;
       if (ids && L.length < MAN.parts.filter(p => (p.pk || p.sys) === pk).length * .6) {
         const lo = Math.min(...L.map(p => p.o)), hi = Math.max(...L.map(p => p.o + p.l));
         try { const r = await fetch(url, { headers: { Range: `bytes=${lo}-${hi - 1}` } }); buf = await r.arrayBuffer(); if (r.status === 206) base = lo; } catch {}
@@ -273,7 +272,7 @@ async function hdUpdate() {
       for (const p of L) { const a = p.h[1], b = a + p.h[2]; if (r && a - r.b < 65536 && b - r.a < 6 * 1048576) { r.b = b; r.ps.push(p); } else { r = { a, b, ps: [p] }; runs.push(r); } }
       for (const run of runs) {
         $('#hHd').textContent = '下載精細模型…';
-        const res = await fetch(`data/hd/h${String(fi).padStart(2, '0')}.bin?v=${DV}`, { headers: { Range: `bytes=${run.a}-${run.b - 1}` } });
+        const res = await fetch(`data/hd/h${String(fi).padStart(2, '0')}.bin`, { headers: { Range: `bytes=${run.a}-${run.b - 1}` } });
         if (res.status !== 206) { try { res.body && res.body.cancel(); } catch {} HD.ok = false; $('#hHd').textContent = '這個網站不支援分段下載，精細模型關閉'; return; }
         const buf = await res.arrayBuffer(); netBytes += buf.byteLength; $('#hNet').textContent = `已下載 ${(netBytes / 1048576).toFixed(1)} MB`;
         for (const p of run.ps) HD.cache.set(p.id, decode(buf, p.h[1] - run.a, p.h[2]));
@@ -297,7 +296,7 @@ function applyHd(want) {
 }
 async function loadDesc(sys) {
   const s = sys === 'insertion' ? 'muscular' : sys;
-  if (!desc[s]) desc[s] = fetch(`data/desc/${s}.json?v=${DV}`).then(r => r.json()).catch(() => ({}));
+  if (!desc[s]) desc[s] = fetch(`data/desc/${s}.json`).then(r => r.json()).catch(() => ({}));
   return desc[s];
 }
 function triCount() { let t = 0, n = 0; for (const m of Object.values(meshes)) if (m.visible) { t += m.geometry.index.count / 3; n++; } $('#hTri').textContent = `${(t / 1000).toFixed(0)}k 三角形・${n} 部位`; }
@@ -399,7 +398,7 @@ $('#q').addEventListener('input', () => {
   const q = $('#q').value.trim().toLowerCase(); if (!q) { $('#res').innerHTML = ''; return; }
   const seen = new Set(), out = [];
   for (const p of MAN.parts) { if (p.sys === 'insertion' || !sexOk(p)) continue; const key = p.b + p.side; if (seen.has(key)) continue; if (p.zh.toLowerCase().includes(q) || p.b.toLowerCase().includes(q)) { seen.add(key); out.push(p); if (out.length >= 200) break; } }
-  const rank = p => (p.zh.toLowerCase() === q || p.b.toLowerCase() === q ? -3 : 0) + (p.zh.toLowerCase().startsWith(q) || p.b.toLowerCase().startsWith(q) ? 0 : 2) + (['muscular', 'skeletal'].includes(p.sys) ? 0 : 1); out.sort((a, b) => rank(a) - rank(b)); out.length = Math.min(out.length, 40);
+  const rank = p => (p.zh.toLowerCase().startsWith(q) || p.b.toLowerCase().startsWith(q) ? 0 : 2) + (['muscular', 'skeletal'].includes(p.sys) ? 0 : 1); out.sort((a, b) => rank(a) - rank(b)); out.length = Math.min(out.length, 40);
   $('#res').innerHTML = out.map(p => `<button data-id="${p.id}"><span>${esc(sideZh(p.side) + p.zh)}</span><small>${esc(p.b)}・${SYSM[p.sys].n}</small></button>`).join('') || '<p class="note">找不到符合的部位</p>';
 });
 $('#res').addEventListener('click', async e => {
@@ -439,7 +438,7 @@ $('#runMode').addEventListener('click', async () => {
 let frames = 0, last = performance.now();
 renderer.setAnimationLoop(() => { const ch = ctl.update(); if (needs || ch) { renderer.render(scene, cam); needs = false; frames++; } const n = performance.now(); if (n - last > 1000) { $('#hFps').textContent = frames ? frames + ' fps' : '靜止'; frames = 0; last = n; } });
 try {
-  MAN = await (await fetch(`data/manifest.json?v=${DV}`)).json(); EXT = MAN.ext; MAN.parts = MAN.parts.filter(p => p.x !== 'rm'); MAN.parts.forEach(p => { byId[p.id] = p; });
+  MAN = await (await fetch('data/manifest.json')).json(); EXT = MAN.ext; MAN.parts.forEach(p => { byId[p.id] = p; });
   drawLayers(); setView('reset'); resize();
   $('#load').textContent = '正在下載骨骼與肌肉…';
   await Promise.all(SYS.filter(([k]) => st.op[k] > 0).map(([k]) => loadSystem(k)));
