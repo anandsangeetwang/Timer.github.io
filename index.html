@@ -982,6 +982,8 @@ span.tag{cursor:default}
 .be-body iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .be-wait{position:absolute;inset:0;display:grid;place-items:center;color:var(--ink-soft);pointer-events:none}
 .be-wait[hidden]{display:none}
+
+.rtd-pick{outline:3px solid #e8892b!important;outline-offset:2px;border-radius:6px}
 </style></head><body>
 <div class="app" id="app"></div>
 <div class="flash" id="flash"></div>
@@ -2612,7 +2614,7 @@ const fmtTime = ts => ts ? new Date(ts).toLocaleString('zh-TW', { month: 'numeri
 
 /* ================= delete: long-press / swipe / multi-select ================= */
 let SEL = null; // { kind, ctx, keys:Set }
-const APP_VER = '3.19';
+const APP_VER = '3.20';
 let swallowClick = false;
 const KIND_LABEL = { group: '群組', timer: '計時器模組', item: '計時器', sound: '音效' };
 function delName(kind, key) {
@@ -2875,7 +2877,7 @@ function bindEvents() {
     if (e.key === 'Escape') { if (SEL) exitSelect(); else if (SORT) exitSort(); else if (openDrawer) closeDrawers(); else if (page !== 'main') goBack(); else closeMenu(); }
   });
   document.addEventListener('pointerdown', e => { if (openDrawer && !e.target.closest('.ftab,.fpanel,.scrim,.toast')) closeDrawers(); }, true);
-  initRichView(); initRichEdit(); initLayout(); initSlots(); initPhase(); initBody(); initSndCat(); initRatioFit(); initDescHist();
+  initRichView(); initRichEdit(); initLayout(); initSlots(); initPhase(); initBody(); initSndCat(); initRatioFit(); initDescHist(); initRtDel();
   const ri = $('#ratioInput');
   ri.addEventListener('focus', () => { const t = curTimer(); ri.value = (t ? t.ratio || 1 : 1).toFixed(2); ri.select(); });
   ri.addEventListener('change', () => setRatio(parseFloat(ri.value)));
@@ -5303,6 +5305,114 @@ function initBody() {
     const it = selItem(); if (!it || !it.body) return; it.body[k] = e.target.checked; markDirty();
   });
   const img = $('#imgBox'); if (img && 'ResizeObserver' in window) new ResizeObserver(bodyFit).observe(img);
+}
+
+/* ================= 說明編輯：刪除摺疊段落、表格、分隔線 (v3.19) =================
+   瀏覽器自己處理 Backspace / Delete 時，會把摺疊標題拆掉、留下刪不掉的空摺疊，或把下一行併進表格、摺疊裡。
+   這裡接手這些情況：
+   - 摺疊標題最前面按 Backspace：標題和內容都空 → 整個摺疊刪掉；標題空、內容還在 → 取消摺疊（內容留下）
+   - 摺疊、表格的下一行最前面按 Backspace（或上一行最後按 Delete）：第一次把它框起來提示，再按一次就刪除；分隔線直接刪除
+   - 表格全部空白時，在格子裡按 Backspace 也一樣（框起來 → 再按刪除）
+   - 工具列「摺疊」：游標在摺疊裡時變成「取消摺疊」 */
+const RTD = { pick: null };
+const rtdBlock = n => n && n.nodeType === 1 && /^(DETAILS|TABLE|HR)$/.test(n.tagName);
+const rtdEmpty = n => !n || (!n.textContent.replace(/[\s​]/g, '') && !n.querySelector('img,table,hr,details'));
+function rtdLineOf(node, ed) { // the direct child of a container (editor or a fold body) that holds the caret
+  let n = node.nodeType === 1 ? node : node.parentElement;
+  while (n && n.parentElement && n.parentElement !== ed && !(n.parentElement.tagName === 'DIV' && n.parentElement.parentElement && n.parentElement.parentElement.tagName === 'DETAILS')) n = n.parentElement;
+  return n && n !== ed ? n : null;
+}
+function rtdAtStart(el, r) { const p = document.createRange(); p.selectNodeContents(el); p.setEnd(r.startContainer, r.startOffset); return !p.toString().replace(/​/g, '').length && !p.cloneContents().querySelector('img'); }
+function rtdAtEnd(el, r) { const p = document.createRange(); p.selectNodeContents(el); p.setStart(r.endContainer, r.endOffset); return !p.toString().replace(/​/g, '').length; }
+function rtdCaret(node, end) { const r = document.createRange(); r.selectNodeContents(node); r.collapse(!end); const s = getSelection(); s.removeAllRanges(); s.addRange(r); rtRange = r.cloneRange(); }
+function rtdUnpick() { if (RTD.pick) RTD.pick.classList.remove('rtd-pick'); RTD.pick = null; }
+function rtdRemove(block, caretTo) {
+  const prev = block.previousSibling, next = block.nextSibling; block.remove(); rtdUnpick();
+  let at = caretTo || (prev && prev.nodeType === 1 ? prev : next && next.nodeType === 1 ? next : null);
+  if (!at) { at = rtLine(); $('#eDesc').append(at); }
+  rtdCaret(at, at === prev); rtGuards($('#eDesc')); syncDesc(); tblBarUpd();
+}
+function rtdAskRemove(block) { // first press: frame it; second press: delete
+  if (block.tagName === 'HR') return true;
+  if (RTD.pick === block) return true;
+  rtdUnpick(); RTD.pick = block; block.classList.add('rtd-pick');
+  toast(`再按一次就刪除這個${block.tagName === 'TABLE' ? '表格' : '摺疊段落'}`);
+  return false;
+}
+function rtdUnfold(d) { // keep the content, drop the fold
+  const body = d.querySelector(':scope > div'), sm = d.querySelector(':scope > summary'), frag = document.createDocumentFragment();
+  if (sm && !rtdEmpty(sm)) { const t = document.createElement('div'); t.innerHTML = '<b>' + sm.innerHTML + '</b>'; frag.append(t); }
+  const kids = body ? [...body.childNodes] : [...d.childNodes].filter(n => n !== sm);
+  if (kids.some(n => n.nodeType === 3 && n.nodeValue.trim() || n.nodeType === 1 && !/^(DIV|P|TABLE|HR|DETAILS|UL|OL|H\d)$/.test(n.tagName))) { const w = document.createElement('div'); w.append(...kids); frag.append(w); } // loose text: keep it on its own line
+  else frag.append(...kids);
+  const first = frag.firstChild; d.replaceWith(frag); rtdUnpick();
+  if (first) rtdCaret(first.nodeType === 1 ? first : first.parentElement, false);
+  rtGuards($('#eDesc')); syncDesc();
+}
+function rtdKey(e) {
+  if (e.key !== 'Backspace' && e.key !== 'Delete') { if (e.key !== 'Shift') rtdUnpick(); return; }
+  const ed = $('#eDesc'), s = getSelection(); if (!s.rangeCount) return;
+  const r = s.getRangeAt(0); if (!r.collapsed || !ed.contains(r.startContainer)) { rtdUnpick(); return; }
+  const back = e.key === 'Backspace', c = r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentElement;
+  const stop = () => { e.preventDefault(); e.stopPropagation(); };
+  // 1. in a fold title
+  const sm = c.closest('summary');
+  if (sm && ed.contains(sm)) {
+    const d = sm.parentElement, body = d.querySelector(':scope > div');
+    if (back && rtdAtStart(sm, r)) {
+      stop();
+      if (rtdEmpty(sm) && rtdEmpty(body)) return rtdRemove(d);
+      if (rtdEmpty(sm)) return rtdUnfold(d);
+      const pv = d.previousElementSibling; if (pv && rtdEmpty(pv) && !rtdBlock(pv)) { pv.remove(); syncDesc(); } // remove an empty line above
+      return;
+    }
+    if (!back && rtdAtEnd(sm, r)) { stop(); if (body) rtdCaret(body, false); return; } // never pull the content into the title
+    if (sm.textContent.replace(/​/g, '').length <= 1) { // last letter: keep the title element alive
+      stop(); sm.innerHTML = '<br>'; rtdCaret(sm, false); syncDesc(); return;
+    }
+    return;
+  }
+  // 2. first line of a fold's content: do not merge it into the title
+  const d = c.closest('details');
+  if (d && ed.contains(d) && back) {
+    const body = d.querySelector(':scope > div'), line = rtdLineOf(c, ed);
+    if (body && body.contains(c) && line && line === body.firstElementChild && rtdAtStart(line, r) || body && body === c && rtdAtStart(body, r)) {
+      stop(); const sum = d.querySelector(':scope > summary');
+      if (rtdEmpty(body) && (!sum || rtdEmpty(sum))) return rtdRemove(d);
+      if (!sum) return rtdUnfold(d); // a fold that lost its title: just keep the content
+      rtdCaret(sum, true); return;
+    }
+  }
+  // 3. table cells: never merge cells; an all-empty table can be removed
+  const cell = c.closest('td,th');
+  if (cell && ed.contains(cell)) {
+    const tb = cell.closest('table');
+    if (back ? rtdAtStart(cell, r) : rtdAtEnd(cell, r)) { stop(); if (rtdEmpty(tb) && rtdAskRemove(tb)) rtdRemove(tb); }
+    return;
+  }
+  // 4. the line next to a fold / table / line
+  const line = rtdLineOf(c, ed); if (!line) return;
+  const nb = back ? line.previousElementSibling : line.nextElementSibling;
+  if (rtdBlock(nb) && (back ? rtdAtStart(line, r) : rtdAtEnd(line, r))) {
+    stop();
+    if (rtdAskRemove(nb)) rtdRemove(nb, line);
+    return;
+  }
+  rtdUnpick();
+}
+function rtdFoldBtn() { // toolbar: 摺疊 ↔ 取消摺疊
+  const b = document.querySelector('[data-act="rtFold"]'); if (!b) return;
+  const c = caretEl(), d = c && c.closest('details'), sp = b.querySelector('span');
+  if (sp) sp.textContent = d ? '取消摺疊' : '摺疊';
+  b.title = d ? '取消這個摺疊（內容留下）' : '插入可以摺疊的段落（選取文字會放進去）';
+}
+function initRtDel() {
+  const ed = $('#eDesc'); if (!ed) return;
+  ed.addEventListener('keydown', rtdKey, true);
+  ed.addEventListener('mousedown', rtdUnpick);
+  document.addEventListener('selectionchange', rtdFoldBtn);
+  const orig = ACT.rtFold;
+  ACT.rtFold = a => { const c = (rtRange && rtRange.startContainer) ? (rtRange.startContainer.nodeType === 1 ? rtRange.startContainer : rtRange.startContainer.parentElement) : caretEl(); const d = c && ed.contains(c) && c.closest('details'); if (d) rtdUnfold(d); else orig(a); };
 }
 
 /* ================= boot ================= */

@@ -84,7 +84,13 @@ h3{font-size:12px;letter-spacing:.06em;color:var(--soft);margin:4px 0 0}
 /* embedded in the timer */
 body.embed-view{background:transparent}
 body.embed-view .app{grid-template-columns:1fr;grid-template-rows:1fr;padding:0;gap:0}
-body.embed-view .side,body.embed-view .hud,body.embed-view .views .vb:not([data-v=reset]),body.embed-view .card-f,body.embed-view .card-m,body.embed-view #cLang{display:none!important}
+body.embed-view .side,body.embed-view .hud,body.embed-view .views .vb[data-v]:not([data-v=reset]),body.embed-view .card-m{display:none!important}
+.vsex{display:none}
+body.embed-view .vsex{display:inline-flex;gap:2px;margin-left:4px}
+.vsex .vb[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
+.vnote{position:absolute;left:50%;top:48px;transform:translateX(-50%);background:color-mix(in srgb,var(--panel) 92%,transparent);border-radius:12px;padding:6px 12px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.15);max-width:90%;text-align:center}
+body.embed-view .card-f button{padding:8px 2px;font-size:12px}
+body.embed-view .banner{top:46px;font-size:13px}
 body.embed-view .view{border-radius:0;background:transparent}
 body.embed-view .load{background:transparent;font-size:13px}
 body.embed-view .card{max-height:45%;width:min(360px,calc(100% - 16px));right:8px;bottom:8px}
@@ -98,8 +104,9 @@ body.embed-edit .cfg-dev{display:none}
     <canvas id="cv" aria-label="3D 人體模型。拖曳旋轉，雙指或滾輪縮放，點部位看說明"></canvas>
     <div class="hud"><span id="hTri">—</span><span id="hFps">靜止</span><span id="hNet"></span><span id="hHd"></span></div>
     <div class="views" role="group" aria-label="視角">
-      <button class="vb" data-v="front">前</button><button class="vb" data-v="back">後</button><button class="vb" data-v="left">左</button><button class="vb" data-v="right">右</button><button class="vb" data-v="top">上</button><button class="vb" data-v="reset">重置</button>
+      <button class="vb" data-v="front">前</button><button class="vb" data-v="back">後</button><button class="vb" data-v="left">左</button><button class="vb" data-v="right">右</button><button class="vb" data-v="top">上</button><button class="vb" data-v="reset">重置</button><span class="vsex" role="group" aria-label="男女"><button class="vb" data-vs="M" aria-pressed="true">男</button><button class="vb" data-vs="F" aria-pressed="false">女</button></span>
     </div>
+    <div class="vnote" id="vNote" hidden></div>
     <div class="banner" id="isoBar" hidden><span id="isoTx"></span><button id="isoEnd">結束隔離</button></div>
     <div class="card" id="card" hidden role="dialog" aria-label="部位說明"></div>
     <div class="legend" id="legend"></div>
@@ -183,6 +190,7 @@ function resize() { const r = cv.parentElement.getBoundingClientRect(); renderer
 new ResizeObserver(resize).observe(cv.parentElement);
 const HOME = { pos: new THREE.Vector3(0, .1, 3.6), tgt: new THREE.Vector3(0, .1, 0) };
 function setView(v) {
+  if (v === 'reset' && EMBED === 'view' && st.saved) { const r = st.saved; st.hidden = new Set(r.hidden); st.faded = new Set(r.faded); st.mk = new Map(r.mk); select(null); isolate(r.iso ? new Set(r.iso) : null); }
   if (v === 'reset') { const h = EMBED === 'view' && st.home; if (h) { cam.position.fromArray(h.p); ctl.target.fromArray(h.t); } else { cam.position.copy(HOME.pos); ctl.target.copy(HOME.tgt); } ctl.update(); needs = true; drawCfg(); return; }
   const t = ctl.target.clone(), d = cam.position.distanceTo(t);
   const dir = { front: [0, 0, 1], back: [0, 0, -1], left: [-1, 0, 0], right: [1, 0, 0], top: [0, 1, .001] }[v];
@@ -444,7 +452,20 @@ $('#res').addEventListener('click', async e => {
 
 /* ---------- tabs ---------- */
 document.querySelector('.tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-selected', x === b)); ['lay', 'find', 'cfg'].forEach(k => { $('#p-' + k).hidden = k !== b.dataset.tab; }); });
-document.querySelector('.views').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) setView(b.dataset.v); });
+document.querySelector('.views').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) setView(b.dataset.v); const x = e.target.closest('[data-vs]'); if (x) viewSex(x.dataset.vs); });
+let vNoteT = 0; const vNote = t => { const n = $('#vNote'); n.textContent = t; n.hidden = false; clearTimeout(vNoteT); vNoteT = setTimeout(() => { n.hidden = true; }, 3500); };
+async function viewSex(sx) { // in the timer: switch 男 / 女 for this look only (not saved)
+  if (st.sex === sx) return; st.sex = sx;
+  document.querySelectorAll('[data-vs],[data-sex]').forEach(x => x.setAttribute('aria-pressed', (x.dataset.vs || x.dataset.sex) === sx));
+  if (st.sel && !sexOk(byId[st.sel])) select(null);
+  if (st.run && st.saved) {
+    const r = Object.assign({}, st.saved, { sex: sx }), need = needIds(r); need.forEach(i => st.run.add(i));
+    await loadSystem('reproductive', need);
+  }
+  restyle();
+  if (!(st.op.reproductive > 0)) vNote('這個畫面沒有顯示生殖系統，男女的差別要打開生殖系統才看得到');
+  else vNote(sx === 'F' ? '女性：子宮、卵巢、輸卵管（皮膚外觀仍是男性模型）' : '男性');
+}
 
 /* ---------- timer config + 練習模式 (load only what is visible) ---------- */
 function visibleIds() { return new Set(Object.values(meshes).filter(m => m.visible && m.userData.p.sys !== 'insertion').map(m => m.name)); }
@@ -479,7 +500,7 @@ function drawLegend() {
 }
 async function applyCfg(c, view) {
   const r = readCfg(c); Object.assign(st, { op: r.op, hidden: r.hidden, faded: r.faded, mk: r.mk, sex: r.sex }); st.iso = r.iso; st.sel = null; $('#card').hidden = true;
-  document.querySelectorAll('[data-sex]').forEach(x => x.setAttribute('aria-pressed', x.dataset.sex === st.sex));
+  document.querySelectorAll('[data-sex],[data-vs]').forEach(x => x.setAttribute('aria-pressed', (x.dataset.sex || x.dataset.vs) === st.sex));
   if (view) {
     const need = needIds(r); st.run = need;
     for (const [id, m] of Object.entries(meshes)) if (!need.has(id) && m.userData.p.sys !== 'insertion') { scene.remove(m); m.geometry.dispose(); delete meshes[id]; }
@@ -489,7 +510,7 @@ async function applyCfg(c, view) {
     drawLayers(); await Promise.all(SYS.filter(([k]) => st.op[k] > 0).map(([k]) => loadSystem(k)));
     $('#isoBar').hidden = !st.iso;
   }
-  st.home = r.cam || null;
+  st.home = r.cam || null; st.saved = r;
   if (r.cam) { cam.position.fromArray(r.cam.p); ctl.target.fromArray(r.cam.t); ctl.update(); } else setView('reset');
   restyle();
 }
