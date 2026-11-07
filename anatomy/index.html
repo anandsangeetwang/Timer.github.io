@@ -29,7 +29,15 @@ button{cursor:pointer;border:0;background:none}
 .banner button{background:#fff;color:#a2560c;border-radius:12px;padding:4px 10px;font-weight:700}
 /* info card (like a tooltip window) */
 .card{position:absolute;right:12px;bottom:12px;width:min(440px,calc(100% - 24px));max-height:62%;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.22)}
-.card-h{display:flex;align-items:flex-start;gap:8px;padding:10px 12px 6px}
+.card-h{display:flex;align-items:flex-start;gap:8px;padding:10px 12px 6px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.card-h:active{cursor:grabbing}
+.card.moved{right:auto;bottom:auto}
+.card.min .card-b,.card.min .card-f,.card.min .card-m,.card.min .card-rs{display:none}
+.card.min{max-height:none!important;height:auto!important}
+.card.min .card-h .en,.card.min .card-h .sys{display:none}
+.card-rs{position:absolute;right:0;bottom:0;width:22px;height:22px;cursor:nwse-resize;touch-action:none;background:linear-gradient(135deg,transparent 55%,var(--soft) 55%,var(--soft) 62%,transparent 62%,transparent 72%,var(--soft) 72%,var(--soft) 79%,transparent 79%);border-radius:0 0 12px 0;opacity:.6;z-index:2}
+.card.sized{max-height:none}
+.card{overflow:hidden}.card-h,.card-f,.card-m{flex:none}.card-b{flex:1 1 auto;min-height:48px}
 .card-h h2{margin:0;font-size:17px;line-height:1.3}
 .card-h .en{font-size:12px;color:var(--soft);font-style:italic}
 .card-h .sys{display:inline-block;font-size:11px;border-radius:8px;padding:1px 7px;margin-top:3px;color:#fff}
@@ -404,6 +412,37 @@ $('#unfadeAll').addEventListener('click', () => { st.faded.clear(); restyle(); }
 
 /* ---------- selection + info card ---------- */
 const sideZh = s => (s === 'R' ? '右側' : s === 'L' ? '左側' : '');
+/* ---------- 說明卡：拖曳標題移動、右下角拉大小、— 縮小（換部位時保留） ---------- */
+const CARD = { min: false, pos: null, size: null };
+function cardPlace() {
+  const c = $('#card'), v = c.parentElement.getBoundingClientRect();
+  c.classList.toggle('min', CARD.min); const mb = $('#cMin'); if (mb) { mb.textContent = CARD.min ? '▢' : '—'; mb.setAttribute('aria-label', CARD.min ? '展開說明' : '縮小說明'); }
+  if (CARD.size) { c.classList.add('sized'); c.style.width = Math.min(CARD.size.w, v.width - 8) + 'px'; c.style.height = CARD.min ? '' : Math.min(CARD.size.h, v.height - 8) + 'px'; }
+  if (CARD.pos) {
+    c.classList.add('moved'); const w = c.offsetWidth, h = c.offsetHeight;
+    c.style.left = Math.max(4, Math.min(v.width - w - 4, CARD.pos.x * v.width)) + 'px'; c.style.top = Math.max(4, Math.min(v.height - Math.min(h, 60) - 4, CARD.pos.y * v.height)) + 'px';
+  }
+}
+(() => {
+  const c = $('#card'); let drag = null;
+  c.addEventListener('pointerdown', e => {
+    const rs = e.target.closest('.card-rs'), hd = e.target.closest('.card-h');
+    if (!rs && (!hd || e.target.closest('button'))) return;
+    const r = c.getBoundingClientRect(), v = c.parentElement.getBoundingClientRect();
+    drag = { rs: !!rs, x: e.clientX, y: e.clientY, l: r.left - v.left, t: r.top - v.top, w: r.width, h: r.height, v };
+    c.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  c.addEventListener('pointermove', e => {
+    if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y, v = drag.v;
+    if (drag.rs) { const fix = [...c.querySelectorAll('.card-h,.card-f,.card-m')].reduce((t, x) => t + (x.offsetParent ? x.offsetHeight : 0), 0); CARD.size = { w: Math.max(240, drag.w + dx), h: Math.max(fix + 56, drag.h + dy) }; if (!CARD.pos) CARD.pos = { x: drag.l / v.width, y: drag.t / v.height }; }
+    else CARD.pos = { x: (drag.l + dx) / v.width, y: (drag.t + dy) / v.height };
+    cardPlace();
+  });
+  const end = () => { drag = null; };
+  c.addEventListener('pointerup', end); c.addEventListener('pointercancel', end);
+  c.addEventListener('dblclick', e => { if (e.target.closest('.card-h') && !e.target.closest('button')) { CARD.pos = CARD.size = null; c.classList.remove('moved', 'sized'); c.style.left = c.style.top = c.style.width = c.style.height = ''; } });
+  new ResizeObserver(() => { if (!c.hidden) cardPlace(); }).observe(c.parentElement);
+})();
 /* ---------- 朗讀：一句一句念，畫面標出念到哪；點句子從那裡開始 ---------- */
 const SPK = { on: false, idx: 0, parts: [], lang: 'zh', run: 0 };
 function spSplit(t) {
@@ -467,9 +506,9 @@ async function select(id) {
   spStop(); st.sel = id; st.ins = false; restyle();
   const card = $('#card'); if (!id) { card.hidden = true; return; }
   const p = byId[id], S = SYSM[p.sys] || { n: '肌肉起止點', c: '#888' };
-  card.hidden = false;
+  card.hidden = false; cardPlace();
   card.innerHTML = `<div class="card-h"><div><h2>${esc(sideZh(p.side) + p.zh)}</h2><div class="en">${esc(p.b)}</div><span class="sys" style="background:${S.c}">${S.n}</span></div>
-    <div class="ico"><span class="lang" role="group" aria-label="說明語言"><button data-lg="zh">中</button><button data-lg="en">EN</button></span><button class="ib" id="cPlay" title="朗讀（點說明裡的句子可以從那裡開始）" aria-label="朗讀">▶</button><button class="ib" id="cStop" title="停止朗讀" aria-label="停止朗讀" disabled>■</button><button class="ib" id="cX" title="關閉" aria-label="關閉">✕</button></div></div>
+    <div class="ico"><span class="lang" role="group" aria-label="說明語言"><button data-lg="zh">中</button><button data-lg="en">EN</button></span><button class="ib" id="cPlay" title="朗讀（點說明裡的句子可以從那裡開始）" aria-label="朗讀">▶</button><button class="ib" id="cStop" title="停止朗讀" aria-label="停止朗讀" disabled>■</button><button class="ib" id="cMin" title="縮小／展開說明" aria-label="縮小說明">—</button><button class="ib" id="cX" title="關閉" aria-label="關閉">✕</button></div></div>
     <div class="card-b" id="cBody"><span class="muted">讀取說明…</span></div>
     <div class="card-f"><button id="cHide">隱藏</button><button id="cFade" aria-pressed="${st.faded.has(id)}">褪色</button><button id="cIso">隔離</button>${p.sys === 'muscular' ? '<button id="cIns" aria-pressed="false" title="顯示這條肌肉附著在骨頭上的位置：紅色＝起點、藍色＝止點">起止點</button>' : '<button id="cFocus">置中</button>'}</div>
     <div class="card-m">標記${Object.entries(MARK).map(([k, [n, c]]) => `<button data-mk="${k}" aria-pressed="${st.mk.get(id) === k}" style="${st.mk.get(id) === k ? 'background:' + c : ''}">${n}</button>`).join('')}</div>`;
@@ -487,6 +526,9 @@ async function select(id) {
   body();
   card.querySelectorAll('[data-lg]').forEach(b => b.onclick = () => { if (lang === b.dataset.lg) return; lang = b.dataset.lg; SPK.lang = lang; body(); });
   $('#cX').onclick = () => select(null);
+  card.insertAdjacentHTML('beforeend', '<div class="card-rs" title="拖曳調整大小" aria-hidden="true"></div>');
+  $('#cMin').onclick = () => { CARD.min = !CARD.min; cardPlace(); };
+  cardPlace();
   $('#cPlay').onclick = () => (SPK.on ? spPause() : spPlay(SPK.idx));
   $('#cStop').onclick = () => spStop();
   $('#cBody').onclick = e => { const x = e.target.closest('.sp'); if (x) spPlay(+x.dataset.i); };

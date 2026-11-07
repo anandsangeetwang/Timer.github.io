@@ -984,6 +984,16 @@ span.tag{cursor:default}
 .be-wait[hidden]{display:none}
 
 .rtd-pick{outline:3px solid #e8892b!important;outline-offset:2px;border-radius:6px}
+
+/* ================= v3.22 說明兩欄可調寬度 ================= */
+.desc-body.flow{columns:auto;column-gap:0;gap:0;column-rule:none;display:flex;align-items:stretch;overflow-x:auto;overflow-y:hidden;white-space:normal}
+.desc-body.flow > .dcol{flex:none;height:100%;overflow-y:auto;overflow-x:hidden;min-width:0;white-space:pre-wrap;scrollbar-width:thin}
+.desc-body.flow > .dsep{flex:none;width:34px;position:relative}
+.desc-body.flow > .dsep::before{content:"";position:absolute;left:50%;top:0;bottom:0;border-left:1px solid rgba(22,25,29,.12)}
+.desc-body.flow > .dsep.drag{cursor:col-resize;touch-action:none}
+.desc-body.flow > .dsep.drag::after{content:"";position:absolute;left:50%;top:50%;width:6px;height:44px;margin:-22px 0 0 -3px;border-radius:3px;background:rgba(22,25,29,.18);transition:background .15s}
+.desc-body.flow > .dsep.drag:hover::after,.desc-body.flow > .dsep.on::after{background:var(--green)}
+.desc-body.flow > .dsep.on::before{border-color:var(--green)}
 </style></head><body>
 <div class="app" id="app"></div>
 <div class="flash" id="flash"></div>
@@ -2614,7 +2624,7 @@ const fmtTime = ts => ts ? new Date(ts).toLocaleString('zh-TW', { month: 'numeri
 
 /* ================= delete: long-press / swipe / multi-select ================= */
 let SEL = null; // { kind, ctx, keys:Set }
-const APP_VER = '3.21';
+const APP_VER = '3.22';
 let swallowClick = false;
 const KIND_LABEL = { group: '群組', timer: '計時器模組', item: '計時器', sound: '音效' };
 function delName(kind, key) {
@@ -2877,7 +2887,7 @@ function bindEvents() {
     if (e.key === 'Escape') { if (SEL) exitSelect(); else if (SORT) exitSort(); else if (openDrawer) closeDrawers(); else if (page !== 'main') goBack(); else closeMenu(); }
   });
   document.addEventListener('pointerdown', e => { if (openDrawer && !e.target.closest('.ftab,.fpanel,.scrim,.toast')) closeDrawers(); }, true);
-  initRichView(); initRichEdit(); initLayout(); initSlots(); initPhase(); initBody(); initSndCat(); initRatioFit(); initDescHist(); initRtDel();
+  initRichView(); initRichEdit(); initLayout(); initSlots(); initPhase(); initBody(); initSndCat(); initRatioFit(); initDescHist(); initRtDel(); initDescFlow();
   const ri = $('#ratioInput');
   ri.addEventListener('focus', () => { const t = curTimer(); ri.value = (t ? t.ratio || 1 : 1).toFixed(2); ri.select(); });
   ri.addEventListener('change', () => setRatio(parseFloat(ri.value)));
@@ -3994,15 +4004,16 @@ function richShow(el) {
   for (const a of el.querySelectorAll('a[href]')) { a.target = '_blank'; a.rel = 'noopener noreferrer'; }
   el.scrollLeft = 0; el.scrollTop = 0;
   requestAnimationFrame(descMoreUpd);
+  if (el.id === 'descText') { el.classList.remove('flow'); descFlowSoon(); }
 }
 const DESC_GAP = 34;
-const descPitch = b => (b.clientWidth + DESC_GAP) / 2; // one column + gap in two-column mode
+const descPitch = b => (b.classList.contains('flow') ? b.clientWidth + DESC_GAP : (b.clientWidth + DESC_GAP) / 2); // two-column mode: one column (CSS columns) or one page of two columns (own flow, descflow.js)
 function descMoreUpd() {
   const d = $('#desc'), b = $('#descText'), nav = $('#descNav'); if (!d || !b) return;
-  const over = b.scrollWidth - b.clientWidth > 4 && getComputedStyle(b).columnCount !== 'auto';
+  const flow = b.classList.contains('flow'), over = b.scrollWidth - b.clientWidth > 4 && (flow || getComputedStyle(b).columnCount !== 'auto');
   d.classList.toggle('more', over && b.scrollLeft + b.clientWidth < b.scrollWidth - 4);
   nav.hidden = !over; if (!over) return;
-  const pt = descPitch(b), total = Math.max(2, Math.round((b.scrollWidth + DESC_GAP) / pt)), first = Math.round(b.scrollLeft / pt) + 1;
+  const pt = descPitch(b), total = flow ? b.querySelectorAll(':scope > .dcol').length : Math.max(2, Math.round((b.scrollWidth + DESC_GAP) / pt)), first = flow ? Math.round(b.scrollLeft / pt) * 2 + 1 : Math.round(b.scrollLeft / pt) + 1;
   $('#descPg').textContent = `${first}–${Math.min(total, first + 1)} / ${total} 欄`;
   nav.firstChild.disabled = b.scrollLeft <= 2; nav.lastChild.disabled = b.scrollLeft + b.clientWidth >= b.scrollWidth - 4;
 }
@@ -5466,6 +5477,81 @@ function initRtDel() {
   document.addEventListener('selectionchange', rtdFoldBtn);
   const orig = ACT.rtFold;
   ACT.rtFold = a => { const c = (rtRange && rtRange.startContainer) ? (rtRange.startContainer.nodeType === 1 ? rtRange.startContainer : rtRange.startContainer.parentElement) : caretEl(); const d = c && ed.contains(c) && c.closest('details'); if (d) rtdUnfold(d); else orig(a); };
+}
+
+/* ================= 說明兩欄：拖曳中間的線調整左右兩欄的寬度 (v3.22) =================
+   CSS 的分欄每一欄一定一樣寬，所以兩欄模式改成自己排：一行一行放進左欄，放不下就換到右欄，再放不下就往右延伸下一頁（同樣左寬右窄）。
+   比例存在計時器 item.dcol（0.25–0.75，沒有＝各一半），在主畫面拖曳中間的線就會存下來，雙擊回到一半。 */
+const DF = { raf: 0, drag: null };
+const DF_BLOCK = /^(DIV|P|TABLE|HR|DETAILS|UL|OL|H[1-6]|BLOCKQUOTE|PRE|SECTION)$/;
+const dfRatio = it => clamp(it && isFinite(it.dcol) ? it.dcol : .5, .25, .75);
+function dfBlocks(b) { // the description's lines as separate blocks
+  if (b.classList.contains('flow')) return [...b.querySelectorAll(':scope > .dcol > *')];
+  const out = []; let cur = null;
+  const flush = () => { if (cur) { out.push(cur); cur = null; } };
+  const line = () => (cur || (cur = document.createElement('div')));
+  for (const n of [...b.childNodes]) {
+    if (n.nodeType === 1 && DF_BLOCK.test(n.tagName)) { flush(); out.push(n); continue; }
+    if (n.nodeType === 3 && n.nodeValue.includes('\n')) {
+      const parts = n.nodeValue.split('\n');
+      parts.forEach((t, i) => { if (t) line().append(document.createTextNode(t)); if (i < parts.length - 1) { if (!cur) line().innerHTML = '<br>'; flush(); } });
+      continue;
+    }
+    if (n.nodeType === 1 && n.tagName === 'BR') { if (!cur) line().append(n); else cur.append(n); flush(); continue; }
+    line().append(n);
+  }
+  flush(); return out;
+}
+function dfTwoCols(b) { b.classList.remove('flow'); const two = getComputedStyle(b).columnCount === '2'; return two; }
+function descFlow() {
+  const b = $('#descText'); if (!b) return;
+  const wasFlow = b.classList.contains('flow'), blocks = dfBlocks(b), left = b.scrollLeft;
+  if (!dfTwoCols(b)) { if (wasFlow) { b.innerHTML = ''; b.append(...blocks); } descMoreUpd(); return; }
+  const it = stageView().it, p = dfRatio(it), W = b.clientWidth, G = DESC_GAP;
+  b.classList.add('flow'); b.innerHTML = '';
+  const H = b.clientHeight, w1 = Math.floor((W - G) * p), w2 = W - G - w1;
+  let n = 0, col = null;
+  const newCol = () => {
+    if (n) { const s = document.createElement('div'); s.className = 'dsep' + (n % 2 ? ' drag' : ''); if (n % 2) { s.title = '拖曳調整左右兩欄的寬度（雙擊回到一半）'; s.setAttribute('role', 'separator'); s.setAttribute('aria-orientation', 'vertical'); } b.append(s); }
+    col = document.createElement('div'); col.className = 'dcol'; col.style.width = (n % 2 ? w2 : w1) + 'px'; b.append(col); n++;
+  };
+  newCol();
+  for (const x of blocks) {
+    col.append(x);
+    if (col.scrollHeight > H + 1 && col.childNodes.length > 1) { x.remove(); newCol(); col.append(x); }
+  }
+  if (n % 2) newCol(); // pages always have two columns
+  b.scrollLeft = left; descMoreUpd();
+}
+function descFlowSoon() { cancelAnimationFrame(DF.raf); DF.raf = requestAnimationFrame(descFlow); }
+function initDescFlow() {
+  const b = $('#descText'); if (!b) return;
+  if ('ResizeObserver' in window) { let w = 0, h = 0; new ResizeObserver(() => { if (b.clientWidth !== w || b.clientHeight !== h) { w = b.clientWidth; h = b.clientHeight; descFlowSoon(); } }).observe(b); }
+  b.addEventListener('toggle', () => descFlowSoon(), true); // a fold opened / closed
+  b.addEventListener('pointerdown', e => {
+    const s = e.target.closest('.dsep.drag'); if (!s) return;
+    const col = s.previousElementSibling, r = b.getBoundingClientRect();
+    DF.drag = { x0: col.getBoundingClientRect().left, W: b.clientWidth - DESC_GAP, id: e.pointerId };
+    s.setPointerCapture(e.pointerId); s.classList.add('on'); e.preventDefault();
+  });
+  b.addEventListener('pointermove', e => {
+    if (!DF.drag) return; const it = stageView().it; if (!it) return;
+    const p = clamp((e.clientX - DF.drag.x0 - DESC_GAP / 2) / DF.drag.W, .25, .75);
+    if (Math.abs(p - dfRatio(it)) < .01) return; it.dcol = Math.round(p * 100) / 100;
+    // quick preview: only change the widths; the full re-flow happens when the drag ends
+    const w1 = Math.floor(DF.drag.W * it.dcol), w2 = DF.drag.W - w1;
+    b.querySelectorAll(':scope > .dcol').forEach((c, i) => { c.style.width = (i % 2 ? w2 : w1) + 'px'; });
+  });
+  const end = () => {
+    if (!DF.drag) return; DF.drag = null; b.querySelectorAll('.dsep.on').forEach(x => x.classList.remove('on'));
+    dfSave(); descFlow();
+  };
+  b.addEventListener('pointerup', end); b.addEventListener('pointercancel', end);
+  b.addEventListener('dblclick', e => { if (!e.target.closest('.dsep.drag')) return; const it = stageView().it; if (!it) return; delete it.dcol; dfSave(); descFlow(); toast('說明兩欄回到一樣寬'); });
+}
+function dfSave() { // remember the ratio on this 計時器
+  const V = stageView(), t = V.t; if (!t || !V.it || t.id === '__qt' || !S.timers[t.id]) return;
+  touch(t); save();
 }
 
 /* ================= boot ================= */
