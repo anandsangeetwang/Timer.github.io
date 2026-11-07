@@ -37,6 +37,23 @@ button{cursor:pointer;border:0;background:none}
 .ib{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-size:16px}
 .ib:hover,.ib[aria-pressed="true"]{background:var(--chip)}
 .card-b{padding:4px 12px 10px;overflow:auto;line-height:1.75;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.card-b .sp{cursor:pointer;border-radius:4px;transition:background .2s}
+.card-b .sp:hover{background:color-mix(in srgb,var(--hi) 12%,transparent)}
+.card-b .sp.cur{background:color-mix(in srgb,var(--hi) 30%,transparent)}
+.card-b h4.sp{display:block}
+.lang{display:inline-flex;background:var(--chip);border-radius:8px;padding:2px;margin-right:2px}
+.lang button{padding:3px 7px;border-radius:6px;font-size:12px}
+.lang button[aria-pressed="true"]{background:var(--panel);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.ib:disabled{opacity:.35}
+.adj{position:absolute;left:10px;top:44px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;max-width:min(320px,calc(100% - 20px))}
+body.embed-view .adj{top:10px}
+.adj-btn{background:color-mix(in srgb,var(--panel) 90%,transparent);border-radius:12px;padding:5px 10px;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.adj-list{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.2);padding:6px;max-height:260px;overflow:auto;width:100%;box-sizing:border-box}
+.adj-row{display:flex;align-items:center;gap:6px;padding:4px 4px;font-size:13px}
+.adj-row span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adj-row small{color:var(--soft);font-size:11px}
+.adj-row button{border:1px solid var(--line);border-radius:8px;padding:3px 8px;font-size:12px}
+.adj-all{width:100%;margin-top:4px;border-radius:8px;padding:6px;background:var(--chip);font-size:12px}
 .card-b h4{margin:8px 0 2px;font-size:13px;color:var(--accent)}
 .card-b .muted{color:var(--soft);font-size:12px}
 .card-f{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line)}
@@ -107,6 +124,7 @@ body.embed-edit .cfg-dev{display:none}
       <button class="vb" data-v="front">前</button><button class="vb" data-v="back">後</button><button class="vb" data-v="left">左</button><button class="vb" data-v="right">右</button><button class="vb" data-v="top">上</button><button class="vb" data-v="reset">重置</button><span class="vsex" role="group" aria-label="男女"><button class="vb" data-vs="M" aria-pressed="true">男</button><button class="vb" data-vs="F" aria-pressed="false">女</button></span>
     </div>
     <div class="vnote" id="vNote" hidden></div>
+    <div class="adj" id="adj" hidden><button class="adj-btn" id="adjBtn" aria-expanded="false"></button><div class="adj-list" id="adjList" hidden></div></div>
     <div class="banner" id="isoBar" hidden><span id="isoTx"></span><button id="isoEnd">結束隔離</button></div>
     <div class="card" id="card" hidden role="dialog" aria-label="部位說明"></div>
     <div class="legend" id="legend"></div>
@@ -213,6 +231,7 @@ const MAT = {};
 function matFor(color, sys, kind) { // shared materials: kind = base | fade | hi
   const key = color + sys + kind; if (MAT[key]) return MAT[key];
   const m = new THREE.MeshStandardMaterial({ color: kind === 'hi' ? '#16b8c9' : MARK[kind] ? MARK[kind][1] : color, roughness: .72, metalness: 0, side: THREE.DoubleSide });
+  if (sys === 'insertion') { m.depthTest = false; m.emissive = new THREE.Color(color).multiplyScalar(.35); } // 起止點畫在最上層，被骨頭擋住也看得到
   m.userData = { sys, kind }; MAT[key] = m; applyOp(m); return m;
 }
 function applyOp(m) {
@@ -231,7 +250,7 @@ function decode(buf, off, len) {
   return g;
 }
 function addPart(p, g) {
-  const m = new THREE.Mesh(g, matFor(colorOf(p), p.sys, 'base')); m.name = p.id; m.userData.p = p; m.userData.lodG = g; m.renderOrder = p.sys === 'skin' ? 2 : p.sys === 'fascia' ? 1 : 0;
+  const m = new THREE.Mesh(g, matFor(colorOf(p), p.sys, 'base')); m.name = p.id; m.userData.p = p; m.userData.lodG = g; m.renderOrder = p.sys === 'insertion' ? 5 : p.sys === 'skin' ? 2 : p.sys === 'fascia' ? 1 : 0;
   meshes[p.id] = m; scene.add(m); styleMesh(m);
 }
 let netBytes = 0;
@@ -346,9 +365,17 @@ function styleMesh(m) {
   if (!sexOk(p)) vis = false;
   m.visible = vis;
   const kind = st.sel === id ? 'hi' : st.mk.has(id) ? st.mk.get(id) : st.faded.has(id) ? 'fade' : 'base';
-  m.material = matFor(colorOf(p), p.sys, kind);
+  if (st.ins && st.sel && st.sel !== id && kind === 'base' && (p.sys === 'muscular' || p.sys === 'fascia' || p.sys === 'skin' || p.sys === 'fat')) m.material = matFor(colorOf(p), p.sys, 'fade'); // 起止點：其他肌肉變透明，才看得到骨頭上的附著點
+  else m.material = matFor(colorOf(p), p.sys, kind);
 }
-const insFor = p => new Set(MAN.parts.filter(x => x.sys === 'insertion' && x.b === p.b && (!p.side || x.side === p.side)).map(x => x.id));
+const nIns = s => s.toLowerCase().replace(/[()]/g, '').replace(/ muscle\b/g, '').replace(/\s+/g, ' ').trim();
+let INSB = null;
+function insFor(p) { // origin / insertion patches of a muscle (a head of a muscle uses the whole muscle's patches)
+  if (!INSB) { INSB = new Map(); for (const x of MAN.parts) if (x.sys === 'insertion') { const k = nIns(x.b); (INSB.get(k) || INSB.set(k, []).get(k)).push(x); } }
+  const nb = nIns(p.b); let key = INSB.has(nb) ? nb : null;
+  if (!key) for (const k of INSB.keys()) if ((' ' + nb + ' ').includes(' ' + k + ' ') && (!key || k.length > key.length)) key = k;
+  return new Set((INSB.get(key) || []).filter(x => !p.side || x.side === p.side).map(x => x.id));
+}
 function restyle() { hdSchedule(); drawLegend(); Object.values(meshes).forEach(styleMesh); Object.values(MAT).forEach(applyOp); needs = true; triCount(); drawCfg(); hiddenBtn(); }
 
 /* ---------- layers panel ---------- */
@@ -377,33 +404,94 @@ $('#unfadeAll').addEventListener('click', () => { st.faded.clear(); restyle(); }
 
 /* ---------- selection + info card ---------- */
 const sideZh = s => (s === 'R' ? '右側' : s === 'L' ? '左側' : '');
+/* ---------- 朗讀：一句一句念，畫面標出念到哪；點句子從那裡開始 ---------- */
+const SPK = { on: false, idx: 0, parts: [], lang: 'zh', run: 0 };
+function spSplit(t) {
+  const out = [];
+  for (const ln of String(t).split('\n')) {
+    if (/^## /.test(ln)) { out.push({ t: ln.slice(3), h: true }); continue; }
+    const m = ln.match(/[^。！？；.!?;]+[。！？；.!?;]*\s*|[。！？；.!?;]+\s*/g) || [];
+    m.forEach((x, i) => out.push({ t: x + (i === m.length - 1 ? '\n' : '') }));
+    if (!m.length) out.push({ t: '\n' });
+  }
+  return out;
+}
+function spVoice(lang) {
+  const v = speechSynthesis.getVoices();
+  return lang === 'zh' ? v.find(x => /zh[-_]TW/i.test(x.lang)) || v.find(x => /zh[-_](HK|Hant)/i.test(x.lang)) || v.find(x => /^zh/i.test(x.lang)) : v.find(x => /en[-_]US/i.test(x.lang)) || v.find(x => /^en/i.test(x.lang));
+}
+function spMark() {
+  document.querySelectorAll('#cBody .sp.cur').forEach(x => x.classList.remove('cur'));
+  const el = SPK.on && document.querySelector(`#cBody .sp[data-i="${SPK.idx}"]`);
+  if (el) { el.classList.add('cur'); el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+  const pl = $('#cPlay'), sp = $('#cStop'); if (pl) { pl.textContent = SPK.on ? '⏸' : '▶'; pl.setAttribute('aria-label', SPK.on ? '暫停' : '朗讀'); pl.title = SPK.on ? '暫停' : '朗讀（點說明裡的句子可以從那裡開始）'; }
+  if (sp) sp.disabled = !SPK.on && SPK.idx === 0;
+}
+function spPlay(i) {
+  if (!('speechSynthesis' in window)) { vNote('這個瀏覽器不支援朗讀'); return; }
+  speechSynthesis.cancel(); const run = ++SPK.run; SPK.on = true; SPK.idx = Math.max(0, Math.min(i, SPK.parts.length - 1));
+  const next = () => {
+    if (run !== SPK.run) return;
+    while (SPK.idx < SPK.parts.length && !SPK.parts[SPK.idx].t.trim()) SPK.idx++;
+    if (SPK.idx >= SPK.parts.length) { SPK.on = false; SPK.idx = 0; spMark(); return; }
+    spMark();
+    const u = new SpeechSynthesisUtterance(SPK.parts[SPK.idx].t.trim()); u.lang = SPK.lang === 'zh' ? 'zh-TW' : 'en-US'; const v = spVoice(SPK.lang); if (v) u.voice = v;
+    u.onend = () => { if (run !== SPK.run) return; SPK.idx++; next(); };
+    u.onerror = () => { if (run !== SPK.run) return; SPK.on = false; spMark(); };
+    speechSynthesis.speak(u);
+  };
+  next();
+}
+function spPause() { SPK.run++; SPK.on = false; try { speechSynthesis.cancel(); } catch {} spMark(); } // 繼續時從這一句重念
+function spStop() { SPK.run++; SPK.on = false; SPK.idx = 0; try { speechSynthesis && speechSynthesis.cancel(); } catch {} spMark(); }
+/* ---------- 已隱藏、已褪色的部位：可以從清單找回來 ---------- */
+function drawAdj() {
+  const box = $('#adj'); if (!box) return;
+  const ids = [...new Set([...st.hidden, ...st.faded])].filter(i => byId[i] && (!st.run || st.run.has(i)));
+  box.hidden = !ids.length; if (!ids.length) { $('#adjList').hidden = true; return; }
+  const nh = ids.filter(i => st.hidden.has(i)).length, nf = ids.length - nh;
+  $('#adjBtn').textContent = [nh ? `已隱藏 ${nh}` : '', nf ? `已褪色 ${nf}` : ''].filter(Boolean).join('・') + ' ▾';
+  if (!$('#adjList').hidden) $('#adjList').innerHTML = ids.map(i => `<div class="adj-row"><span title="點一下選取">${esc(sideZh(byId[i].side) + byId[i].zh)}</span><small>${st.hidden.has(i) ? '隱藏' : '褪色'}</small><button data-adj="${i}">恢復</button></div>`).join('') + '<button class="adj-all" data-adj="*">全部恢復</button>';
+}
+function adjOpen(on, flash) {
+  if (flash) { const b = $('#adjBtn'); drawAdj(); if (b) { b.animate([{ transform: 'scale(1.15)' }, { transform: 'scale(1)' }], 400); } return; }
+  $('#adjList').hidden = !on; $('#adjBtn').setAttribute('aria-expanded', on); drawAdj();
+}
+$('#adjBtn').addEventListener('click', () => adjOpen($('#adjList').hidden));
+$('#adjList').addEventListener('click', e => {
+  const b = e.target.closest('[data-adj]'), row = e.target.closest('.adj-row');
+  if (b) { const i = b.dataset.adj; if (i === '*') { st.hidden.clear(); st.faded.clear(); } else { st.hidden.delete(i); st.faded.delete(i); } restyle(); return; }
+  if (row) { const i = row.querySelector('[data-adj]').dataset.adj; st.hidden.delete(i); st.faded.delete(i); restyle(); select(i); }
+});
 async function select(id) {
-  st.sel = id; st.ins = false; restyle();
+  spStop(); st.sel = id; st.ins = false; restyle();
   const card = $('#card'); if (!id) { card.hidden = true; return; }
   const p = byId[id], S = SYSM[p.sys] || { n: '肌肉起止點', c: '#888' };
   card.hidden = false;
   card.innerHTML = `<div class="card-h"><div><h2>${esc(sideZh(p.side) + p.zh)}</h2><div class="en">${esc(p.b)}</div><span class="sys" style="background:${S.c}">${S.n}</span></div>
-    <div class="ico"><button class="ib" id="cSpeak" title="朗讀" aria-label="朗讀">🔊</button><button class="ib" id="cLang" title="切換英文原文" aria-label="切換英文原文">EN</button><button class="ib" id="cX" title="關閉" aria-label="關閉">✕</button></div></div>
+    <div class="ico"><span class="lang" role="group" aria-label="說明語言"><button data-lg="zh">中</button><button data-lg="en">EN</button></span><button class="ib" id="cPlay" title="朗讀（點說明裡的句子可以從那裡開始）" aria-label="朗讀">▶</button><button class="ib" id="cStop" title="停止朗讀" aria-label="停止朗讀" disabled>■</button><button class="ib" id="cX" title="關閉" aria-label="關閉">✕</button></div></div>
     <div class="card-b" id="cBody"><span class="muted">讀取說明…</span></div>
-    <div class="card-f"><button id="cHide">隱藏</button><button id="cFade" aria-pressed="${st.faded.has(id)}">褪色</button><button id="cIso">隔離</button>${p.sys === 'muscular' ? '<button id="cIns" aria-pressed="false">起止點</button>' : '<button id="cFocus">置中</button>'}</div>
+    <div class="card-f"><button id="cHide">隱藏</button><button id="cFade" aria-pressed="${st.faded.has(id)}">褪色</button><button id="cIso">隔離</button>${p.sys === 'muscular' ? '<button id="cIns" aria-pressed="false" title="顯示這條肌肉附著在骨頭上的位置：紅色＝起點、藍色＝止點">起止點</button>' : '<button id="cFocus">置中</button>'}</div>
     <div class="card-m">標記${Object.entries(MARK).map(([k, [n, c]]) => `<button data-mk="${k}" aria-pressed="${st.mk.get(id) === k}" style="${st.mk.get(id) === k ? 'background:' + c : ''}">${n}</button>`).join('')}</div>`;
   const d = (await loadDesc(p.sys))[p.b] || {};
-  let lang = d.zh ? 'zh' : 'en';
+  if (st.sel !== id) return;
+  let lang = SPK.lang === 'en' || !d.zh ? (d.en ? 'en' : 'zh') : 'zh';
   const body = () => {
-    const t = lang === 'zh' ? d.zh : d.en;
-    $('#cBody').innerHTML = t ? esc(t).replace(/^## (.*)$/gm, '<h4>$1</h4>') : `<span class="muted">${lang === 'zh' ? '這個部位還沒有中文說明，可以按 EN 看英文原文。' : '沒有英文說明。'}</span>`;
-    $('#cLang').setAttribute('aria-pressed', lang === 'en'); $('#cLang').textContent = lang === 'en' ? '中' : 'EN';
+    spStop();
+    const t = lang === 'zh' ? d.zh : d.en, name = lang === 'zh' ? sideZh(p.side) + p.zh : (p.side ? (p.side === 'R' ? 'Right ' : 'Left ') : '') + p.b;
+    SPK.parts = [{ t: name + (lang === 'zh' ? '。' : '. '), name: true }].concat(t ? spSplit(t) : [{ t: lang === 'zh' ? '這個部位還沒有中文說明，可以按 EN 看英文原文。' : 'No English description.', muted: true }]);
+    SPK.lang = lang; SPK.idx = 0;
+    $('#cBody').innerHTML = SPK.parts.map((x, i) => x.name ? '' : x.h ? `<h4 class="sp" data-i="${i}">${esc(x.t)}</h4>` : `<span class="sp${x.muted ? ' muted' : ''}" data-i="${i}">${esc(x.t)}</span>`).join('');
+    card.querySelectorAll('[data-lg]').forEach(b => { b.setAttribute('aria-pressed', b.dataset.lg === lang); });
   };
   body();
-  $('#cLang').onclick = () => { lang = lang === 'zh' ? 'en' : 'zh'; body(); };
+  card.querySelectorAll('[data-lg]').forEach(b => b.onclick = () => { if (lang === b.dataset.lg) return; lang = b.dataset.lg; SPK.lang = lang; body(); });
   $('#cX').onclick = () => select(null);
-  $('#cSpeak').onclick = () => {
-    if (!('speechSynthesis' in window)) return; speechSynthesis.cancel();
-    const txt = lang === 'zh' ? sideZh(p.side) + p.zh + '。' + (d.zh || '') : p.b + '. ' + (d.en || '').replace(/## /g, '');
-    const u = new SpeechSynthesisUtterance(txt.slice(0, 1200)); u.lang = lang === 'zh' ? 'zh-TW' : 'en-US'; speechSynthesis.speak(u);
-  };
-  $('#cHide').onclick = () => { st.hidden.add(id); select(null); };
-  $('#cFade').onclick = e => { st.faded.has(id) ? st.faded.delete(id) : st.faded.add(id); e.target.setAttribute('aria-pressed', st.faded.has(id)); st.sel = null; restyle(); st.sel = id; };
+  $('#cPlay').onclick = () => (SPK.on ? spPause() : spPlay(SPK.idx));
+  $('#cStop').onclick = () => spStop();
+  $('#cBody').onclick = e => { const x = e.target.closest('.sp'); if (x) spPlay(+x.dataset.i); };
+  $('#cHide').onclick = () => { st.hidden.add(id); select(null); adjOpen(false, true); };
+  $('#cFade').onclick = e => { st.faded.has(id) ? st.faded.delete(id) : st.faded.add(id); e.target.setAttribute('aria-pressed', st.faded.has(id)); st.sel = null; restyle(); st.sel = id; adjOpen(false, true); };
   $('#cIso').onclick = () => isolate(new Set([id]));
   if ($('#cFocus')) $('#cFocus').onclick = () => focusOn([id]);
   card.querySelectorAll('[data-mk]').forEach(b => b.onclick = () => {
@@ -411,7 +499,7 @@ async function select(id) {
     card.querySelectorAll('[data-mk]').forEach(x => { const on = st.mk.get(id) === x.dataset.mk; x.setAttribute('aria-pressed', on); x.style.background = on ? MARK[x.dataset.mk][1] : ''; });
     st.sel = null; restyle(); st.sel = id; // show the mark colour right away
   });
-  if ($('#cIns')) $('#cIns').onclick = async e => { st.ins = !st.ins; e.target.setAttribute('aria-pressed', st.ins); if (st.ins) { await loadSystem('insertion'); } restyle(); };
+  if ($('#cIns')) $('#cIns').onclick = async e => { st.ins = !st.ins; e.target.setAttribute('aria-pressed', st.ins); if (st.ins) { await loadSystem('insertion'); } restyle(); if (st.ins) vNote(insFor(p).size ? '紅色＝起點（肌肉從哪裡開始）、藍色＝止點（肌肉拉到哪裡）' : '這條肌肉沒有起止點資料'); };
 }
 function isolate(set) {
   st.iso = set; const names = [...(set || [])].map(i => sideZh(byId[i].side) + byId[i].zh);
@@ -496,7 +584,8 @@ function markWords() { // 「伸展：雙側股二頭肌、左側腰大肌。收
 }
 function drawLegend() {
   const used = new Set([...st.mk].filter(([i]) => meshes[i] && meshes[i].visible).map(([, v]) => v));
-  $('#legend').innerHTML = Object.entries(MARK).filter(([k]) => used.has(k)).map(([k, [n, c]]) => `<span><i style="background:${c}"></i>${n}</span>`).join('');
+  $('#legend').innerHTML = Object.entries(MARK).filter(([k]) => used.has(k)).map(([k, [n, c]]) => `<span><i style="background:${c}"></i>${n}</span>`).join('') + (st.ins ? '<span><i style="background:#d23a3a"></i>起點</span><span><i style="background:#2f67d2"></i>止點</span>' : '');
+  drawAdj();
 }
 async function applyCfg(c, view) {
   const r = readCfg(c); Object.assign(st, { op: r.op, hidden: r.hidden, faded: r.faded, mk: r.mk, sex: r.sex }); st.iso = r.iso; st.sel = null; $('#card').hidden = true;
